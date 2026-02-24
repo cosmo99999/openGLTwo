@@ -7,16 +7,37 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "shader.h"
-
+#include "camera.h"
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-
-// settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, -3.0f);
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+float lastX = SCR_WIDTH / 2.0f;
+float lastY = SCR_HEIGHT / 2.0f;
+bool firstMouse = true;
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos; // reversed since y-coordinates go bottom->top
+
+    lastX = xpos;
+    lastY = ypos;
+
+    camera.ProcessMouseMovement(xoffset, yoffset, GL_TRUE);
+};
+
 int main()
 {
     // glfw: initialize and configure
@@ -41,7 +62,8 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
     // glad: load all OpenGL function pointers
     // ---------------------------------------
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -190,15 +212,40 @@ int main()
     ourShader.setInt("texture1", 0);
     ourShader.setInt("texture2", 1);
 
-
+    float animationTimer = 0;
+    bool animationUp = true;
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
     {
+        
+        float currentFrame = (float)glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+        animationTimer += deltaTime;
+        float dif = 0.2f;
+        
+        for(int i = 0; i < sizeof(cubePositions)/ sizeof(glm::vec3); i++){
+            
+            if(animationUp)
+                cubePositions[i].y += dif/100;
+            if(!animationUp)
+                cubePositions[i].y -= dif/100;
+            if(animationTimer > 2){
+                animationTimer = 0;
+                animationUp = !animationUp;
+            }
+        }
+        static double lastPrint = 0.0;
+        double now = glfwGetTime();
+        if (now - lastPrint > 0.2) { // 5 times a second
+        std::cout << deltaTime << "\n";
+        lastPrint = now;
+        }
         // input
         // -----
         processInput(window);
-
+        glfwSetCursorPosCallback(window, mouse_callback);
         // render
         // ------
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
@@ -214,10 +261,9 @@ int main()
         ourShader.use();
 
         // create transformations
-        glm::mat4 view          = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+        glm::mat4 view          = camera.GetViewMatrix(); // make sure to initialize matrix to identity matrix first
         glm::mat4 projection    = glm::mat4(1.0f);
         projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        view       = glm::translate(view, cameraPos);
         // pass transformation matrices to the shader
         ourShader.setMat4("projection", projection); // note: currently we set the projection matrix each frame, but since the projection matrix rarely changes it's often best practice to set it outside the main loop only once.
         ourShader.setMat4("view", view);
@@ -257,16 +303,34 @@ int main()
 // ---------------------------------------------------------------------------------------------------------
 void processInput(GLFWwindow *window)
 {
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        cameraPos.y += 0.01;
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        cameraPos.y -= 0.01;
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        cameraPos.z += 0.01;
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        cameraPos.z -= 0.01;        
+    Camera_Movement moveDir = NONE;
+
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
+        glfwSetWindowShouldClose(window, 1);
+    }
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+        moveDir = FORWARD;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+        moveDir = BACKWARD;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
+        if(moveDir == FORWARD) moveDir = FORWARDLEFT;
+        else if(moveDir == BACKWARD) moveDir = BACKWARDLEFT;
+        else moveDir = LEFT;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+        if(moveDir == FORWARD) moveDir = FORWARDRIGHT;
+        else if(moveDir == BACKWARD) moveDir = BACKWARDRIGHT;
+        else moveDir = RIGHT;
+    }
+    // static double lastPrint = 0.0;
+    // double now = glfwGetTime();
+    // if (now - lastPrint > 0.2) { // 5 times a second
+    // std::cout << camera.velocity << "\n";
+    // lastPrint = now;
+    // }
+    camera.ProcessKeyboard(moveDir, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
