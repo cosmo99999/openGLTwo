@@ -2,6 +2,7 @@
 #include "mesh.h"
 #include "material.h"
 #include "camera.h"
+#include <random>
 
 class Object {
 public:
@@ -10,20 +11,26 @@ public:
     glm::vec3 rotation;
     glm::vec3 scale = glm::vec3(1.0f);
     
+    
     Object(glm::vec3 pos);
     void Draw(Renderer& renderer, Camera& camera, glm::vec3 lightPos);
     void Update(Camera& camera, glm::vec3 lightPos);
     glm::mat4 GetModelMatrix();
-
+    
 };
 
 class ObjectCollection {
-public:
+    public:
     std::vector<Object*> objects;
     std::vector<glm::vec3> objectPositions;
-    int dASize = 0;
+
+    std::random_device rd;
+
     ObjectCollection(){}
 
     void Add(Object* obj);
-    void DrawAll(Camera camera, glm::vec3& lightPosition);
+    void DrawAll(Renderer& renderer, Camera camera, glm::vec3& lightPosition);
+    void RandomiseObjectPositions(glm::vec2 bounds);
+    void RandomiseObjectColours();
+    void RandomiseScale();
 };

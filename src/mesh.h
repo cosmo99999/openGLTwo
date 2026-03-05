@@ -30,12 +30,6 @@ public:
         material.shader->setMat4("u_view", camera.GetViewMatrix());
         material.shader->setMat4("u_projection", camera.GetProjection());
         va->Bind();
-            GLint locModel = glGetUniformLocation(material.shader->ID, "u_model");
-            GLint locView  = glGetUniformLocation(material.shader->ID, "u_view");
-            GLint locProj  = glGetUniformLocation(material.shader->ID, "u_projection");
-            std::cout << "u_model loc: "      << locModel 
-              << " u_view loc: "      << locView 
-              << " u_projection loc: " << locProj << "\n";
         if(ib == nullptr){
             renderer.Draw(*va, *material.shader);
         }

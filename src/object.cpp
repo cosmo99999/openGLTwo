@@ -8,11 +8,42 @@ void ObjectCollection::Add(Object *obj)
     objectPositions.emplace_back(obj->position);
 }
 
-void ObjectCollection::DrawAll(Camera camera, glm::vec3 &lightPosition)
+void ObjectCollection::DrawAll(Renderer& renderer, Camera camera, glm::vec3 &lightPosition)
 {
-    // for(Object* obj : objects){
-    //     obj->Draw(camera, lightPosition);
-    // }
+    for(Object* obj : objects){
+        obj->Draw(renderer, camera, lightPosition);
+    }
+}
+
+void ObjectCollection::RandomiseObjectPositions(glm::vec2 bounds)
+{
+    std::mt19937 engine(rd()); 
+    std::uniform_real_distribution<float> dist(bounds.x, bounds.y); 
+    for(Object* obj : objects){
+        obj->position.x = dist(engine);
+        obj->position.y = dist(engine);
+        obj->position.z = dist(engine); 
+    }
+}
+void ObjectCollection::RandomiseObjectColours()
+{
+    std::mt19937 engine(rd()); 
+    std::uniform_real_distribution<float> dist(0.0f, 1.0f); 
+    for(int i = 1; i < objects.size(); i++){
+        auto* obj = objects[i];
+        obj->mesh.material.colour.r = dist(engine);
+        obj->mesh.material.colour.g = dist(engine);
+        obj->mesh.material.colour.b = dist(engine); 
+    }
+}
+void ObjectCollection::RandomiseScale()
+{
+    std::mt19937 engine(rd()); 
+    std::uniform_real_distribution<float> dist(5.0f, 15.0f); 
+    for(int i = 0; i < objects.size(); i++){
+        Object* obj = objects[i];
+        obj->scale = glm::vec3(dist(engine));
+    }
 }
 
 Object::Object(glm::vec3 pos){
