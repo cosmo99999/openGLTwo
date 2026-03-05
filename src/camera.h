@@ -56,9 +56,11 @@ public:
     //movement
     float velocity;
     glm::vec3 movingToward;
-    float acceleration = 200.0f;
+    float acceleration = 100.0f;
     float deceleration = 400.0f;
     float maxSpeed = 100.0f;
+    float scrWidth = 0.0f;
+    float scrHeight = 0.0f;
     // constructor with vectors
     Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
     {
@@ -79,7 +81,28 @@ public:
         Pitch = pitch;
         updateCameraVectors();
     }
+    Camera(glm::vec3 position, float width, float height) 
+    : Front(glm::vec3(0.0f, 0.0f, -1.0f)), 
+      MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+    {
+        Position = position;
+        WorldUp = glm::vec3(0.0f, 1.0f, 0.0f);
+        Yaw = YAW;
+        Pitch = PITCH;
+        velocity = 0.0f;
+        movingToward = Front;
+        scrWidth = width;
+        scrHeight = height;
+        updateCameraVectors();
+    }
+    glm::mat4 GetProjection(){
+        float nearPlane = 0.1f;
+        float farPlane = 100.0f;
+        float aspectRatio = scrWidth/scrHeight;
+        float FOV = 90;
 
+        return glm::perspective(glm::radians(FOV), aspectRatio, nearPlane, farPlane);
+    }
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
     glm::mat4 GetViewMatrix()
     {

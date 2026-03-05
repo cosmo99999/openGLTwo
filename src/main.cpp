@@ -1,11 +1,20 @@
-#include "includes.h"
-#include "cube.h"
+#include "globals.h"
+#include "shapes.h"
 #include <iostream>
-extern Globals globals;
+#include "camera.h"
+#include "assetManager.h"
+
+Globals globals = Globals();
 GLFWwindow* window;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(
+    glm::vec3(0.0f, 0.0f, 3.0f), // position
+    globals.SCR_WIDTH,             // scrWidth
+    globals.SCR_HEIGHT             // scrHeight
+);
+AssetManager am;
+
 float lastX = globals.SCR_WIDTH / 2.0f;
 float lastY = globals.SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -18,13 +27,13 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
         lastY = ypos;
         firstMouse = false;
     }
-
+    
     float xoffset = xpos - lastX;
     float yoffset = lastY - ypos; // reversed since y-coordinates go bottom->top
-
+    
     lastX = xpos;
     lastY = ypos;
-
+    
     camera.ProcessMouseMovement(xoffset, yoffset, GL_TRUE);
 };
 
@@ -35,10 +44,11 @@ int Config(){
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    
     #ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     #endif
+    camera.scrWidth = globals.SCR_WIDTH;
+    camera.scrHeight = globals.SCR_HEIGHT;
     
     // glfw window creation
     // --------------------
@@ -65,7 +75,24 @@ int main()
 {
     if(Config() == -1) return -1;
     glEnable(GL_DEPTH_TEST);
-    Cube cube = Cube(10);
+    
+    am.LoadShader("Regular","../shaders/cubeVert.txt", "../shaders/cubeFrag.txt");
+    am.LoadShader("Lighting","../shaders/lightVert.txt", "../shaders/lightFrag.txt");
+    
+    Cube c1 = Cube(am.GetShader("Regular"), glm::vec3(0.0f, 0.0f, -2.0f));
+    Cube light = Cube(am.GetShader("Regular"), glm::vec3(0.0f, 0.0f, 6.0f));
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(c1.vertices), c1.vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+    Renderer renderer;
     while (!glfwWindowShouldClose(window))
     {
         float currentFrame = glfwGetTime();
@@ -73,23 +100,27 @@ int main()
         globals.lastFrame = currentFrame;
         processInput(window);
         glfwSetCursorPosCallback(window, mouse_callback);
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
-        // create transformations
-        
-        cube.UpDownAnimation();
-        cube.Draw(camera);
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
+        static bool printed = false;
+        c1.Draw(renderer, camera, glm::vec3(0.0f, 5.0f, 2.0f));
+        light.Draw(renderer, camera, glm::vec3(0.0f, 5.0f, 2.0f));
+        am.GetShader("Regular")->use();
+        am.GetShader("Regular")->setMat4("u_projection", camera.GetProjection());
+        am.GetShader("Regular")->setMat4("u_view", camera.GetViewMatrix());
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f));
+        am.GetShader("Regular")->setMat4("u_model", model);
+        glBindVertexArray(cubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    
     // optional: de-allocate all resources once they've outlived their purpose:
     // ------------------------------------------------------------------------
     // glDeleteVertexArrays(1, &VAO);
     // glDeleteBuffers(1, &VBO);
-
+    
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();

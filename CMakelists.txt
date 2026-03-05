@@ -29,6 +29,11 @@ add_subdirectory(third_party/glm)
 add_executable(glfw_app
   src/main.cpp
   third_party/stb_image.cpp      # <- your file that has STB_IMAGE_IMPLEMENTATION
+  src/object.cpp
+  src/indexBuffer.cpp
+  src/renderer.cpp
+  src/vertexArray.cpp
+  src/vertexBuffer.cpp
 )
 
 target_include_directories(glfw_app PRIVATE

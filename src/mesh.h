@@ -1,0 +1,44 @@
+#include "material.h"
+#include "vertexArray.h"
+#include "indexBuffer.h"
+#include "renderer.h"
+#include "camera.h"
+
+class Mesh {
+public:
+    VertexArray* va = nullptr;
+    IndexBuffer* ib = nullptr;
+    Material material;
+
+    Mesh(){}
+    Mesh(Shader* sh, IndexBuffer* indexBuffer, VertexArray* vertexArray){
+        material = Material(sh);
+        va = vertexArray;
+        ib = indexBuffer;
+    }
+    Mesh(Shader* sh, VertexArray* vertexArray){
+        material = Material(sh);
+        va = vertexArray;
+    }
+    void Draw(Renderer& renderer, Camera& camera, glm::mat4 model){
+        material.Bind();
+        
+        material.shader->setMat4("u_model", model);
+        material.shader->setMat4("u_view", camera.GetViewMatrix());
+        material.shader->setMat4("u_projection", camera.GetProjection());
+        va->Bind();
+            GLint locModel = glGetUniformLocation(material.shader->ID, "u_model");
+            GLint locView  = glGetUniformLocation(material.shader->ID, "u_view");
+            GLint locProj  = glGetUniformLocation(material.shader->ID, "u_projection");
+            std::cout << "u_model loc: "      << locModel 
+              << " u_view loc: "      << locView 
+              << " u_projection loc: " << locProj << "\n";
+        if(ib == nullptr){
+            renderer.Draw(*va, *material.shader);
+        }
+        else{
+            ib->Bind();
+            renderer.Draw(*va, *ib, *material.shader);
+        }
+    }
+};
