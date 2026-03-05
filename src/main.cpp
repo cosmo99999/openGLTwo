@@ -79,18 +79,8 @@ int main()
     am.LoadShader("Regular","../shaders/cubeVert.txt", "../shaders/cubeFrag.txt");
     am.LoadShader("Lighting","../shaders/lightVert.txt", "../shaders/lightFrag.txt");
     
-    Cube c1 = Cube(am.GetShader("Regular"), glm::vec3(0.0f, 0.0f, -2.0f));
-    Cube light = Cube(am.GetShader("Regular"), glm::vec3(0.0f, 0.0f, 6.0f));
-    unsigned int cubeVAO, cubeVBO;
-    glGenVertexArrays(1, &cubeVAO);
-    glGenBuffers(1, &cubeVBO);
-    glBindVertexArray(cubeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(c1.vertices), c1.vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6*sizeof(float), (void*)(3*sizeof(float)));
-    glEnableVertexAttribArray(1);
+    Cube c1 = Cube(am.GetShader("Lighting"), glm::vec3(0.0f, 0.0f, -2.0f));
+    Sphere light = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 6.0f));
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     Renderer renderer;
     while (!glfwWindowShouldClose(window))
@@ -102,15 +92,7 @@ int main()
         glfwSetCursorPosCallback(window, mouse_callback);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
         static bool printed = false;
-        c1.Draw(renderer, camera, glm::vec3(0.0f, 5.0f, 2.0f));
-        light.Draw(renderer, camera, glm::vec3(0.0f, 5.0f, 2.0f));
-        am.GetShader("Regular")->use();
-        am.GetShader("Regular")->setMat4("u_projection", camera.GetProjection());
-        am.GetShader("Regular")->setMat4("u_view", camera.GetViewMatrix());
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -2.0f));
-        am.GetShader("Regular")->setMat4("u_model", model);
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+
         glfwSwapBuffers(window);
         glfwPollEvents();
     }

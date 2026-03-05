@@ -47,22 +47,15 @@ public:
     };
 
     Cube(Shader* sh, glm::vec3 pos) : Object(pos){
-        std::cout << "sizeof(vertices): " << sizeof(vertices) << "\n";
-        std::cout << "first few verts: " 
-                  << vertices[0] << "," << vertices[1] << "," << vertices[2] << " | "
-                  << vertices[3] << "," << vertices[4] << "," << vertices[5] << "\n";
-        
         VertexBuffer* vb = new VertexBuffer(vertices, sizeof(vertices));
-        VertexArray* va  = new VertexArray();
+        VertexArray* va = new VertexArray();
         VertexBufferLayout vl;
         vl.Push<float>(3);
         vl.Push<float>(3);
         va->AddBuffer(*vb, vl);
         va->SetCount(36);
-        mesh = Mesh(sh, va);
+        mesh = Mesh(sh, va, vb);
         
-        std::cout << "va count after setup: " << va->GetCount() << "\n";
-        std::cout << "mesh.va count: " << mesh.va->GetCount() << "\n";
     }
 };
 
@@ -122,18 +115,20 @@ public:
     const float* getInterleavedVertices() const     { return interleavedVertices.data(); }
 
     glm::vec3 lightPos = glm::vec3(-5.0f, 5.0f, 0.0f);
-    Sphere(int stackCount, int sectorCount, float r, glm::vec3 pos) : Object(pos){
+    Sphere(Shader* sh, int stackCount, int sectorCount, float r, glm::vec3 pos) : Object(pos){
         radius = r;
         
         GenSphere(stackCount, sectorCount);
-        //vb = new VertexBuffer(getInterleavedVertices(), getInterleavedVertexSize());
-        //ib = new IndexBuffer(getIndices(),getIndexCount());
-        //va = new VertexArray();
-        // vb->Bind();
-        // VertexBufferLayout vl;
-        // vl.Push<float>(3);
-        // vl.Push<float>(3);
-        // va->AddBuffer(*vb, vl);
+        VertexBuffer* vb = new VertexBuffer(getInterleavedVertices(), getInterleavedVertexSize());
+        IndexBuffer* ib = new IndexBuffer(getIndices(),getIndexCount());
+        VertexArray* va = new VertexArray();
+        vb->Bind();
+        VertexBufferLayout vl;
+        vl.Push<float>(3);
+        vl.Push<float>(3);
+        va->AddBuffer(*vb, vl);
+        va->SetCount(getIndexCount());
+        mesh = Mesh(sh,ib, va, vb);
     }
     void GenSphere(int stackCount, int sectorCount){
         float x, y, z, xy;                              // vertex position
@@ -229,19 +224,4 @@ public:
             interleavedVertices.push_back(normals[i*3+2]);
         }
     }
-    // void Update(Camera camera, glm::vec3& lightPosition) override {
-    //     if(type == ShaderType::Lighting){
-    //         lightPosition.x += 0.005f;
-    //         if(lightPosition.x > 5.0f){
-    //             lightPosition.x = -5.0f;
-    //         }
-    //         shader.setVec3("objectColor", 1.0f, 0.5f, 0.31f);
-    //         shader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
-    //         shader.setVec3("lightPos", lightPosition);
-    //         shader.setVec3("viewPos", camera.Position);
-    //     }
-    //     if(type == ShaderType::Regular){
-    //         shader.setVec3("objectColor", 1.0f, 1.0f, 1.0f);
-    //     }
-    // }
 };

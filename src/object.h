@@ -8,7 +8,7 @@ public:
     Mesh mesh;
     glm::vec3 position;
     glm::vec3 rotation;
-    glm::vec3 scale;
+    glm::vec3 scale = glm::vec3(1.0f);
     
     Object(glm::vec3 pos);
     void Draw(Renderer& renderer, Camera& camera, glm::vec3 lightPos);
