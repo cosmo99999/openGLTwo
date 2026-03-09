@@ -4,8 +4,8 @@
 class AssetManager {
 public:
     AssetManager(){}
-    void LoadShader(const std::string& name, const std::string& vert, const std::string& frag) {
-        m_Shaders[name] = std::make_unique<Shader>(vert, frag);
+    void LoadShader(const std::string& name, const std::string& str) {
+        m_Shaders[name] = std::make_unique<Shader>(str);
     }
 
     Shader* GetShader(const std::string& name) {

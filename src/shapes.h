@@ -2,46 +2,75 @@
 #include "globals.h"
 #include <cmath>
 
+const float PI = 3.1415926525f;
 extern Globals globals;
 
+class Plane : public Object {
+public:
+    float vertices [48] = {
+         50.0f, 0.0f, 50.0f, 0.0f, 1.0f, 0.0f,
+         50.0f, 0.0f, -50.0f, 0.0f, 1.0f, 0.0f,
+        -50.0f, 0.0f, 50.0f, 0.0f, 1.0f, 0.0f,
+
+        50.0f, 0.0f, -50.0f, 0.0f, 1.0f, 0.0f,
+        -50.0f, 0.0f, 50.0f, 0.0f, 1.0f, 0.0f,
+        -50.0f, 0.0f, -50.0f , 0.0f, 1.0f, 0.0f
+    };
+    Plane(Shader* sh, glm::vec3 pos) : Object(pos){
+        VertexBuffer* vb = new VertexBuffer(vertices, sizeof(vertices));
+        VertexArray* va = new VertexArray();
+        VertexBufferLayout vl;
+        vl.Push<float>(3);
+        vl.Push<float>(3);
+        va->AddBuffer(*vb, vl);
+        va->SetCount(6);
+        mesh = Mesh(sh, va, vb);
+        mesh.material.colour = glm::vec3(0.5f,0.5f,0.5f);
+    }
+};
 class Cube : public Object{
     
 public:
     float vertices[36*6] = {
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-    0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-    0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-    0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
     -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+
     -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-    0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-    0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-    0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
     -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
     -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
     -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
     -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
     -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
     -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-    0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-    0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-    0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-    0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-    0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-    0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-    0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-    0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-    0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
     -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+
     -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-    0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-    0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-    0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
     -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
     -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
     };
@@ -135,13 +164,13 @@ public:
         float nx, ny, nz, lengthInv = 1.0f / radius;    // vertex normal
         //float s, t;                                     // vertex texCoord
 
-        float sectorStep = 2 * M_PI / sectorCount;
-        float stackStep = M_PI / stackCount;
+        float sectorStep = 2 * PI / sectorCount;
+        float stackStep = PI / stackCount;
         float sectorAngle, stackAngle;
 
         for(int i = 0; i <= stackCount; ++i)
         {
-            stackAngle = M_PI  / 2 - i * stackStep;        // starting from pi/2 to -pi/2
+            stackAngle = PI  / 2 - i * stackStep;        // starting from pi/2 to -pi/2
             xy = radius * cosf(stackAngle);             // r * cos(u)
             z = radius * sinf(stackAngle);              // r * sin(u)
         

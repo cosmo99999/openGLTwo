@@ -1,17 +1,14 @@
+#pragma once
 #ifndef CAMERA_H
 #define CAMERA_H
 #include "includes.h"
-
+#include "glfw/glfw3.h"
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
     FORWARD,
     BACKWARD,
     LEFT,
     RIGHT,
-    FORWARDRIGHT,
-    FORWARDLEFT,
-    BACKWARDRIGHT,
-    BACKWARDLEFT,
     NONE
 };
 
@@ -54,10 +51,10 @@ public:
     float MouseSensitivity;
     float Zoom;
     //movement
-    float velocity;
-    glm::vec3 movingToward;
-    float acceleration = 100.0f;
-    float deceleration = 400.0f;
+    glm::vec3 velocity;
+    glm::vec3 wishDir = glm::vec3(0.0f);
+    float acceleration = 800.0f;
+    float deceleration = 1000.0f;
     float maxSpeed = 100.0f;
     float scrWidth = 0.0f;
     float scrHeight = 0.0f;
@@ -68,8 +65,8 @@ public:
         WorldUp = up;
         Yaw = yaw;
         Pitch = pitch;
-        velocity = 0.0f;
-        movingToward = Front;
+        velocity = glm::vec3(0.0f);
+        wishDir = Front;
         updateCameraVectors();
     }
     // constructor with scalar values
@@ -89,15 +86,15 @@ public:
         WorldUp = glm::vec3(0.0f, 1.0f, 0.0f);
         Yaw = YAW;
         Pitch = PITCH;
-        velocity = 0.0f;
-        movingToward = Front;
+        velocity = glm::vec3(0.0f);
+        wishDir = Front;
         scrWidth = width;
         scrHeight = height;
         updateCameraVectors();
     }
     glm::mat4 GetProjection(){
         float nearPlane = 0.1f;
-        float farPlane = 100.0f;
+        float farPlane = 200.0f;
         float aspectRatio = scrWidth/scrHeight;
         float FOV = 90;
 
@@ -108,53 +105,56 @@ public:
     {
         return glm::lookAt(Position, Position + Front, Up);
     }
-    void Update(Camera_Movement direction, float deltaTime){
-        
-        if(direction == FORWARD)
-            movingToward = Front;
-        if(direction == BACKWARD)
-            movingToward = -Front;
-        if(direction == RIGHT)
-            movingToward = Right;
-        if(direction == LEFT)
-            movingToward = -Right;
-        if(direction == FORWARDRIGHT)
-            movingToward = (Front + Right)/2.0f;
-        if(direction == FORWARDLEFT)
-            movingToward = (Front - Right)/2.0f;
-        if(direction == BACKWARDRIGHT)
-            movingToward = -(Front - Right)/2.0f;
-        if(direction == BACKWARDLEFT)
-            movingToward = -(Front + Right)/2.0f;
-        
-        if(direction != NONE){
-            velocity += acceleration * deltaTime;
-        }else if (velocity != 0){
-            if(velocity > 0){
-                velocity -= deceleration * deltaTime;
+    void Update(std::vector<Camera_Movement> directions, float deltaTime){
+        wishDir = GetWishDir(directions);
+        if(glm::length(wishDir) > 0.0f){
+            float bias = 0.9f;
+            float currentSpeed = glm::dot(velocity, wishDir);
+            float addSpeed = maxSpeed - currentSpeed;
+
+            if(addSpeed > 0){
+                float accelSpeed = acceleration  * deltaTime;
+                if(accelSpeed > addSpeed) accelSpeed = addSpeed;
+                velocity += accelSpeed * wishDir;
             }
-            if(velocity < 0){
-                velocity += deceleration * deltaTime;
-            }     
-
-            if(shouldClamp(velocity))
-                velocity = 0;
         }
-        if(shouldClamp(velocity, maxSpeed)){
-            if(velocity > 0) velocity = maxSpeed;
-            if(velocity < 0) velocity = -maxSpeed;
-        }
-        Position += movingToward * velocity * deltaTime;
-
-
+            else {
+                // decelerate when no input
+                float speed = glm::length(velocity);
+                if (speed > 0) {
+                    float drop = deceleration * deltaTime;
+                    if(drop >= speed)
+                        velocity = glm::vec3(0.0f);
+                    else
+                        velocity -= glm::normalize(velocity) * drop;
+                }
+            }
+        Position += velocity * globals.deltaTime;
     }
 
+    glm::vec3 GetWishDir(std::vector<Camera_Movement> directions){
+        
+        glm::vec3 flatFront = glm::normalize(glm::vec3(Front.x, 0.0f, Front.z));
+        glm::vec3 flatRight = glm::normalize(glm::vec3(Right.x, 0.0f, Right.z));
+    
+        glm::vec3 wishDir = glm::vec3(0.0f);
 
+        for(auto& dir : directions){
+            if (dir == Camera_Movement::FORWARD) wishDir += flatFront;
+            if (dir == Camera_Movement::BACKWARD) wishDir -= flatFront;
+            if (dir == Camera_Movement::RIGHT) wishDir += flatRight;
+            if (dir == Camera_Movement::LEFT) wishDir -= flatRight;
+        }
+        if (glm::length(wishDir) > 0)
+        wishDir = glm::normalize(wishDir);
+
+        return wishDir;
+    }
     
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
-    void ProcessKeyboard(Camera_Movement direction, float deltaTime)
+    void ProcessKeyboard(std::vector<Camera_Movement> directions, float deltaTime)
     {
-        Update(direction, deltaTime);
+        Update(directions, deltaTime);
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.

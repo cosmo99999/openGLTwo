@@ -12,37 +12,40 @@ class Shader {
 public:
     unsigned int ID;
     Shader(){}
-Shader(std::string vertexPath, std::string fragmentPath){
-    std::cout << "Loading vertex shader: " << vertexPath << "\n";
-    std::cout << "Loading fragment shader: " << fragmentPath << "\n";
+Shader(std::string shaderPath){
+    std::cout << "Loading shader: " << shaderPath << "\n";
 
-    std::string vertexCode;
-    std::string fragmentCode;
-
-    std::ifstream vShaderFile;
-    std::ifstream fShaderFile;
-
-    vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-    fShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+    std::string vertexCode, fragmentCode;
+    std::ifstream shaderFile;
+    shaderFile.exceptions(std::ifstream::badbit);
 
     try {
-        vShaderFile.open(vertexPath);
-        fShaderFile.open(fragmentPath);
+        shaderFile.open(shaderPath);
+        std::string line;
+        std::stringstream ss[2];
+        int type = -1; // 0 = vertex, 1 = fragment
 
-        std::stringstream vShaderStream, fShaderStream;
-        vShaderStream << vShaderFile.rdbuf();
-        fShaderStream << fShaderFile.rdbuf();
+        while (std::getline(shaderFile, line)) {
+            if (!line.empty() && line.back() == '\r')
+                line.pop_back();
 
-        vShaderFile.close();
-        fShaderFile.close();
+            if (line.find("#shader vertex") != std::string::npos)
+                type = 0;
+            else if (line.find("#shader fragment") != std::string::npos)
+                type = 1;
+            else if (type != -1)
+                ss[type] << line << "\n";
+        }
 
-        vertexCode = vShaderStream.str();
-        fragmentCode = fShaderStream.str();
+        shaderFile.close();
+        vertexCode   = ss[0].str();
+        fragmentCode = ss[1].str();
     }
     catch (const std::ifstream::failure& e) {
         std::cout << "ERROR::SHADER::FILE_NOT_SUCCESSFULLY_READ: " << e.what() << "\n";
-        throw; // don't compile empty strings
+        throw;
     }
+    
 
     if (vertexCode.empty() || fragmentCode.empty()) {
         std::cout << "ERROR::SHADER::SOURCE_EMPTY\n";

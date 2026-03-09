@@ -4,6 +4,12 @@
 #include "camera.h"
 #include <random>
 
+enum class ObjectDirection {
+    UP,
+    DOWN,
+    ONGROUND,
+    NONE
+};
 class Object {
 public:
     Mesh mesh;
@@ -11,8 +17,16 @@ public:
     glm::vec3 rotation;
     glm::vec3 scale = glm::vec3(1.0f);
     
+    float acceleration = 50.0f;
+    float decceleration = 20.0f;
+    float maxVelocity = 30.0f;
+    float velocity = 0.0f;
+    
+    ObjectDirection moving = ObjectDirection::NONE;
+    glm::vec3 direction = glm::vec3(0.0f);
     
     Object(glm::vec3 pos);
+    void GravityEffect();
     void Draw(Renderer& renderer, Camera& camera, glm::vec3 lightPos);
     void Update(Camera& camera, glm::vec3 lightPos);
     glm::mat4 GetModelMatrix();

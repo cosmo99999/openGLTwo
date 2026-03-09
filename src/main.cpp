@@ -3,15 +3,15 @@
 #include <iostream>
 #include "camera.h"
 #include "assetManager.h"
-
+#include <filesystem>
 Globals globals = Globals();
 GLFWwindow* window;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void processInput(GLFWwindow *window);
+void processInput(GLFWwindow *window, Object& obj);
 void RendererEffects(Renderer& rn);
 
 Camera camera(
-    glm::vec3(0.0f, 0.0f, 3.0f), // position
+    glm::vec3(0.0f, 5.0f, 10.0f), // position
     globals.SCR_WIDTH,             // scrWidth
     globals.SCR_HEIGHT             // scrHeight
 );
@@ -43,6 +43,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 int Config(){
     // glfw: initialize and configure
     // ------------------------------
+    std::cout << "CWD: " << std::filesystem::current_path() << "\n";
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -73,10 +74,9 @@ int Config(){
     glfwSetCursorPosCallback(window, mouse_callback);
     glViewport(0, 0, globals.SCR_WIDTH, globals.SCR_HEIGHT);
     glEnable(GL_DEPTH_TEST);
-    glClearColor(0.01f, 0.01f, 0.01f, 1.0f);
-    
-    am.LoadShader("Regular","../shaders/cubeVert.txt", "../shaders/cubeFrag.txt");
-    am.LoadShader("Lighting","../shaders/lightVert.txt", "../shaders/lightFrag.txt");
+    glClearColor(0.7f, 0.71f, 0.71f, 1.0f);
+    am.LoadShader("Regular","../shaders/basic.shader");
+    am.LoadShader("Lighting","../shaders/lighting.shader");
 
     return 0;
 }
@@ -84,42 +84,26 @@ int main()
 {
     if(Config() == -1) return -1;
 
-    ObjectCollection objects;
-    Cube light = Cube(am.GetShader("Regular"), glm::vec3(0.0f, 0.0f, -2.0f));
-    Sphere s1 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-    Sphere s2 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-    Sphere s3 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-    Sphere s4 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-    Sphere s5 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-    Sphere s6 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-    Sphere s7 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-    Sphere s8 = Sphere(am.GetShader("Lighting"), 20, 20, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f));
-
-    objects.Add(&light);
-    objects.Add(&s1);
-    objects.Add(&s2);
-    objects.Add(&s3);
-    objects.Add(&s4);
-    objects.Add(&s5);
-    objects.Add(&s6);
-    objects.Add(&s7);
-    objects.Add(&s8);
-
-    objects.RandomiseObjectPositions(glm::vec2(-55.0f, 55.0f));
-    objects.RandomiseObjectColours();
-    objects.RandomiseScale();
     Renderer renderer;
+    Plane f = Plane(am.GetShader("Lighting"), glm::vec3(0.0f, 10.0f, 0.0f));
+    Plane r = Plane(am.GetShader("Lighting"), glm::vec3(0.0f));
+    Sphere light = Sphere(am.GetShader("Regular"), 20, 20, 1.0f, glm::vec3(0.0f, 30.0f, 0.0f));
+    light.direction = glm::vec3(0.0f, -1.0f, 0.0f);
+    ObjectCollection c;
+    c.Add(&f);
+    c.Add(&light);
+    c.Add(&r);
     while (!glfwWindowShouldClose(window))
     {
         RendererEffects(renderer);
         float currentFrame = glfwGetTime();
         globals.deltaTime = currentFrame - globals.lastFrame;
         globals.lastFrame = currentFrame;
-        processInput(window);
+        processInput(window, light);
         glfwSetCursorPosCallback(window, mouse_callback);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
-        static bool printed = false;
-        objects.DrawAll(renderer, camera, light.position);
+        light.GravityEffect();
+        c.DrawAll(renderer, camera, light.position);
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
@@ -155,28 +139,28 @@ void RendererEffects(Renderer& rn){
 }
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
+void processInput(GLFWwindow *window, Object& obj)
 {
-    Camera_Movement moveDir = NONE;
+    std::vector<Camera_Movement> directions;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS){
+        obj.position.y = 20.0f;
+        obj.moving = ObjectDirection::NONE;
+    }
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS){
         glfwSetWindowShouldClose(window, 1);
     }
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-        moveDir = FORWARD;
+        directions.emplace_back(Camera_Movement::FORWARD);
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-        moveDir = BACKWARD;
+        directions.emplace_back(Camera_Movement::BACKWARD);
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-        if(moveDir == FORWARD) moveDir = FORWARDLEFT;
-        else if(moveDir == BACKWARD) moveDir = BACKWARDLEFT;
-        else moveDir = LEFT;
+        directions.emplace_back(Camera_Movement::LEFT);
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-        if(moveDir == FORWARD) moveDir = FORWARDRIGHT;
-        else if(moveDir == BACKWARD) moveDir = BACKWARDRIGHT;
-        else moveDir = RIGHT;
+        directions.emplace_back(Camera_Movement::RIGHT);
     }
     // static double lastPrint = 0.0;
     // double now = glfwGetTime();
@@ -184,7 +168,7 @@ void processInput(GLFWwindow *window)
     // std::cout << camera.velocity << "\n";
     // lastPrint = now;
     // }
-    camera.ProcessKeyboard(moveDir, globals.deltaTime);
+    camera.ProcessKeyboard(directions, globals.deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
