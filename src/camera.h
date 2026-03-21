@@ -11,7 +11,23 @@ enum Camera_Movement {
     RIGHT,
     NONE
 };
-
+enum class MovementStatus {
+    Accelerating,
+    Decelerating,
+    InitAcceleration,
+    None
+};
+inline std::string getStatusName(MovementStatus ms){
+    if(ms == MovementStatus::Accelerating)
+        return "Accelerating";
+    if(ms == MovementStatus::InitAcceleration)
+        return "Init Acceleration";
+    if(ms == MovementStatus::Decelerating)
+        return "Decelerating";
+    if(ms == MovementStatus::None)
+        return "None";
+    return "NULL";
+}
 inline bool shouldClamp(float speed, float max){
     if(speed > 0 && speed > max ||
        speed < 0 && speed < max ){
@@ -47,40 +63,27 @@ public:
     float Yaw;
     float Pitch;
     // camera options
-    float MovementSpeed;
+    float moveSpeed = 10.0f;
     float MouseSensitivity;
     float Zoom;
     //movement
     glm::vec3 velocity;
     glm::vec3 wishDir = glm::vec3(0.0f);
-    float acceleration = 800.0f;
-    float deceleration = 1000.0f;
-    float maxSpeed = 100.0f;
+    float moveBias = 0.5f;
+    float mBBase = 0.5f;
+    float mBMin = 0.1f;
+    float mBMax = 0.9f;
+    float acceleration = 100.0f;
+    float deceleration = 20.0f;
+    float speedMulti = 0.0f;
+    float maxSpeed = 20.0f;
     float scrWidth = 0.0f;
     float scrHeight = 0.0f;
-    // constructor with vectors
-    Camera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
-    {
-        Position = position;
-        WorldUp = up;
-        Yaw = yaw;
-        Pitch = pitch;
-        velocity = glm::vec3(0.0f);
-        wishDir = Front;
-        updateCameraVectors();
-    }
-    // constructor with scalar values
-    Camera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
-    {
-        Position = glm::vec3(posX, posY, posZ);
-        WorldUp = glm::vec3(upX, upY, upZ);
-        Yaw = yaw;
-        Pitch = pitch;
-        updateCameraVectors();
-    }
+    float FOV = 90;
+    MovementStatus mStatus = MovementStatus::None;
     Camera(glm::vec3 position, float width, float height) 
     : Front(glm::vec3(0.0f, 0.0f, -1.0f)), 
-      MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+      moveSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
     {
         Position = position;
         WorldUp = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -96,7 +99,6 @@ public:
         float nearPlane = 0.1f;
         float farPlane = 200.0f;
         float aspectRatio = scrWidth/scrHeight;
-        float FOV = 90;
 
         return glm::perspective(glm::radians(FOV), aspectRatio, nearPlane, farPlane);
     }
@@ -105,34 +107,8 @@ public:
     {
         return glm::lookAt(Position, Position + Front, Up);
     }
-    void Update(std::vector<Camera_Movement> directions, float deltaTime){
-        wishDir = GetWishDir(directions);
-        if(glm::length(wishDir) > 0.0f){
-            float bias = 0.9f;
-            float currentSpeed = glm::dot(velocity, wishDir);
-            float addSpeed = maxSpeed - currentSpeed;
-
-            if(addSpeed > 0){
-                float accelSpeed = acceleration  * deltaTime;
-                if(accelSpeed > addSpeed) accelSpeed = addSpeed;
-                velocity += accelSpeed * wishDir;
-            }
-        }
-            else {
-                // decelerate when no input
-                float speed = glm::length(velocity);
-                if (speed > 0) {
-                    float drop = deceleration * deltaTime;
-                    if(drop >= speed)
-                        velocity = glm::vec3(0.0f);
-                    else
-                        velocity -= glm::normalize(velocity) * drop;
-                }
-            }
-        Position += velocity * globals.deltaTime;
-    }
-
-    glm::vec3 GetWishDir(std::vector<Camera_Movement> directions){
+    
+    glm::vec3 GetWishDirection(std::vector<Camera_Movement> directions){
         
         glm::vec3 flatFront = glm::normalize(glm::vec3(Front.x, 0.0f, Front.z));
         glm::vec3 flatRight = glm::normalize(glm::vec3(Right.x, 0.0f, Right.z));
@@ -150,11 +126,33 @@ public:
 
         return wishDir;
     }
+    void UpdatePosition(std::vector<Camera_Movement> directions, float deltaTime){
+        
+        moveSpeed = glm::length(velocity);
+        wishDir = GetWishDirection(directions);
+        float speedModifier = 0.0f;
+        float currentSpeed = 1.0f;
+        if(glm::length(velocity) > 0)
+            currentSpeed = glm::dot(glm::normalize(velocity), wishDir);
+
+        if(glm::length(wishDir) > 0.0f){
+            speedModifier = (maxSpeed - currentSpeed) * acceleration * deltaTime;
+        }else{
+            velocity *= 0.95f;
+            if(glm::length(velocity) < 0.5f)
+                velocity = glm::vec3(0.0f);
+        }
+        velocity += speedModifier * wishDir;
+        if(glm::length(velocity) > maxSpeed){
+            velocity = glm::normalize(velocity) * maxSpeed;
+        }
+        Position += velocity * deltaTime;
+    }
     
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
     void ProcessKeyboard(std::vector<Camera_Movement> directions, float deltaTime)
     {
-        Update(directions, deltaTime);
+        UpdatePosition(directions, deltaTime);
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
@@ -204,5 +202,4 @@ private:
         Up    = glm::normalize(glm::cross(Right, Front));
     }
 };
-
 #endif

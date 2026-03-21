@@ -1,0 +1,30 @@
+not really working movement 1
+
+        direction = GetDirection(directions);
+        speedMulti = 1.0f;
+        if(glm::length(velocity) > 0.0f && glm::length(direction) > 0.0f)
+            speedMulti = glm::dot(glm::normalize(velocity),glm::normalize(direction));
+        if(glm::length(direction) != 0.0f){
+            if(glm::length(velocity) > 0.0f){
+                moveSpeed += acceleration * deltaTime;
+                mStatus = MovementStatus::Accelerating;
+            }else{
+                moveSpeed += acceleration * deltaTime;
+                mStatus = MovementStatus::InitAcceleration;
+            }
+            velocity = ((velocity + (direction * speedMulti))/2.0f) * moveSpeed;
+
+        }else if(glm::length(velocity) > 0.0f){
+            moveSpeed -= deceleration * deltaTime;
+            velocity *= 0.9f;
+            if(glm::length(velocity) < 0.1f){
+                velocity = glm::vec3(0.0f);
+            }
+            mStatus = MovementStatus::Decelerating;
+            
+        }else{
+            moveSpeed = 0.0f;
+            mStatus = MovementStatus::None;
+        }
+        moveSpeed = glm::clamp(moveSpeed, 0.0f, maxSpeed);
+        Position += velocity * deltaTime;

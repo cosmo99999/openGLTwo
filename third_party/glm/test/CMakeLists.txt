@@ -3,17 +3,6 @@ option(GLM_QUIET "No CMake Message" OFF)
 option(GLM_TEST_ENABLE "Build unit tests" ON)
 option(GLM_PERF_TEST_ENABLE "Build perf tests" OFF)
 
-if(GLM_PERF_TEST_ENABLE)
-	add_definitions(-DGLM_TEST_PERF)
-	endif()
-
-if (GLM_TEST_ENABLE_SIMD_FMA)
-	add_definitions(-DGLM_FORCE_FMA)
-	if((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-		add_compile_options(-mfma)
-	endif()
-endif()
-
 # Compiler and default options
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

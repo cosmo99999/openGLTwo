@@ -1,53 +1,54 @@
 cmake_minimum_required(VERSION 3.20)
-project(glfw_app LANGUAGES C CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# ---- OpenGL (system) ----
+project(openGLTwo)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(glm_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glm/build/CMakeFiles/Export/) # if necessary
+set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/imgui)
+#glad
+set(APP_SOURCES 
+    ${IMGUI_DIR}/imconfig.h
+    ${IMGUI_DIR}/imgui_demo.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_impl_glfw.h
+    ${IMGUI_DIR}/imgui_impl_glfw.cpp
+    ${IMGUI_DIR}/imgui_impl_opengl3.h
+    ${IMGUI_DIR}/imgui_impl_opengl3.cpp
+    ${IMGUI_DIR}/imgui_internal.h
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/imgui.cpp 
+    ${IMGUI_DIR}/imgui.h 
+    ${IMGUI_DIR}/imgui_internal.h
+    ${IMGUI_DIR}/imstb_rectpack.h
+    ${IMGUI_DIR}/imstb_textedit.h
+    ${IMGUI_DIR}/imstb_truetype.h
+    ${IMGUI_DIR}/imgui_impl_opengl3_loader.h
+    src/main.cpp
+    src/indexBuffer.cpp
+    src/object.cpp
+    src/renderer.cpp
+    src/vertexArray.cpp
+    src/vertexBuffer.cpp
+    third_party/glad/src/glad.c
+)
 find_package(OpenGL REQUIRED)
+find_package(glfw3 REQUIRED)
 
-# ---- GLFW (vendored) ----
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
-set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
-add_subdirectory(third_party/glfw)
+add_executable(openGLTwo  ${APP_SOURCES})
 
-# ---- GLAD (vendored generated loader) ----
-add_library(glad STATIC
-  third_party/glad/src/glad.c
-)
-target_include_directories(glad PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/glad/include
-)
 
-# ---- GLM (vendored) ----
-add_subdirectory(third_party/glm)
+add_subdirectory(third_party/glm third_party/glfw )
 
-# ---- App ----
-add_executable(glfw_app
-  src/main.cpp
-  third_party/stb_image.cpp      # <- your file that has STB_IMAGE_IMPLEMENTATION
-  src/object.cpp
-  src/indexBuffer.cpp
-  src/renderer.cpp
-  src/vertexArray.cpp
-  src/vertexBuffer.cpp
+include_directories(GLAD third_party/glad/include)
+
+target_include_directories(openGLTwo PRIVATE 
+third_party/glm
+third_party/glfw/include
+third_party/imgui
 )
 
-target_include_directories(glfw_app PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/third_party  # <- so #include "stb_image.h" works
-)
 
-target_link_libraries(glfw_app PRIVATE
-  glfw
-  glad
-  OpenGL::GL
-  glm::glm
-)
-
-# Linux needs these sometimes
-if(UNIX AND NOT APPLE)
-  target_link_libraries(glfw_app PRIVATE dl pthread)
-endif()
+target_link_libraries(openGLTwo
+${GLFW3_LIBRARY}
+glm::glm
+OpenGL::GL)
