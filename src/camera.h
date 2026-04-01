@@ -76,7 +76,7 @@ public:
     float acceleration = 100.0f;
     float deceleration = 20.0f;
     float speedMulti = 0.0f;
-    float maxSpeed = 20.0f;
+    float maxSpeed = 40.0f;
     float scrWidth = 0.0f;
     float scrHeight = 0.0f;
     float FOV = 90;

@@ -1,3 +1,4 @@
+#pragma once
 #include "object.h"
 #include "globals.h"
 #include <cmath>

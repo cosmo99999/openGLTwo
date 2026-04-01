@@ -1,10 +1,13 @@
 #pragma once
 #include "shader.h"
 #include "memory"
+#include <unordered_map>
+#include <iostream>
 class AssetManager {
 public:
     AssetManager(){}
     void LoadShader(const std::string& name, const std::string& str) {
+        std::cout << " asset manager shader name " + str << "\n";
         m_Shaders[name] = std::make_unique<Shader>(str);
     }
 

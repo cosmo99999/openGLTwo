@@ -1,10 +1,11 @@
 #pragma once
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include <imgui.h>
+#include <vector>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "../third_party/stb_image.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "imgui.h"
-#include "imgui_impl_opengl3.h"
-#include "imgui_impl_glfw.h"
+#include "../bindings/imgui_impl_opengl3.h"
+#include "../bindings/imgui_impl_glfw.h"

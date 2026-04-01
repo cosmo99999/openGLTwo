@@ -5,13 +5,16 @@
 #include "assetManager.h"
 #include <filesystem>
 #include "widgets.h"
-
+#include "includes.h"
+#include "enetClient.h"
+#include <thread>
 Globals globals = Globals();
 GLFWwindow* window;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window, Object& obj);
 void RendererEffects(Renderer& rn);
-
+void GLFrameBegin();
+void GLFrameEnd(GLFWwindow* window);
 Camera camera(
     glm::vec3(0.0f, 5.0f, 10.0f), // position
     globals.SCR_WIDTH,             // scrWidth
@@ -24,6 +27,7 @@ bool firstMouse = true;
 bool mouseEnabled = false;
 float ambientLight = 0.1f;
 float ambUp = true;
+float backColour[4] = {0.5f, 0.5f, 0.5f, 1.0f};
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -48,10 +52,10 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 };
 void IMGUIStart();
 void IMGUIEnd();
+void ENETCLIENTUPDATE();
 int Config(){
     // glfw: initialize and configure
     // ------------------------------
-    std::cout << "CWD: " << std::filesystem::current_path() << "\n";
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -82,9 +86,10 @@ int Config(){
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glViewport(0, 0, globals.SCR_WIDTH, globals.SCR_HEIGHT);
     glEnable(GL_DEPTH_TEST);
-    glClearColor(0.2f, 0.1f, 0.2f, 1.0f);
-    am.LoadShader("Regular","../shaders/basic.shader");
-    am.LoadShader("Lighting","../shaders/lighting.shader");
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    std::cout << "current working dir " << std::filesystem::current_path() << "\n"; 
+    am.LoadShader("Regular","../../shaders/basic.shader");
+    am.LoadShader("Lighting","../../shaders/lighting.shader");
     
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -100,41 +105,62 @@ int Config(){
 int main()
 {
     if(Config() == -1) return -1;
-
+    EnetClient eClient = EnetClient();
     Renderer renderer;
-    Plane f = Plane(am.GetShader("Lighting"), glm::vec3(0.0f, 0.0f, 0.0f));
-    Plane r = Plane(am.GetShader("Lighting"), glm::vec3(0.0f, 10.0f, 0.0f));
-    Sphere light = Sphere(am.GetShader("Regular"), 20, 20, 1.0f, glm::vec3(0.0f, 30.0f, 0.0f));
-    light.direction = glm::vec3(0.0f, -1.0f, 0.0f);
+    Sphere light = Sphere(am.GetShader("Regular"), 20, 20, 1.0f, glm::vec3(0.0f, 0.0f, 0.0f));
     ObjectCollection c;
-    c.Add(&f);
+    
+    
+    
     c.Add(&light);
-    c.Add(&r);
-    while (!glfwWindowShouldClose(window))
-    {
-        IMGUIStart();
-        float currentFrame = glfwGetTime();
-        globals.deltaTime = currentFrame - globals.lastFrame;
-        globals.lastFrame = currentFrame;
-        if(globals.deltaTime > 0.5)
-            globals.deltaTime = 0;
-        processInput(window, light);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // also clear the depth buffer now!
-        light.GravityEffect();
-        c.DrawAll(renderer, camera, light.position);
-        cameraWidget(camera);
-        IMGUIEnd();
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+    for(int i = 0; i < 20; i++){
+        Sphere* temp = new Sphere(am.GetShader("Lighting"), 10, 10, 1.0f, glm::vec3(0.0f));
+        c.Add(temp);
     }
+    c.RandomiseObjectColours();
+    c.RandomiseScale();
+    c.RandomiseObjectPositions(glm::vec2(-100.0f, 100.0f));
+    
+    auto net_lambda([](EnetClient eClient){
+        while(!glfwWindowShouldClose(window)){
+            eClient.SendPacket(camera);
+            std::cout<< std::to_string(camera.Position.x) << "\n";
+        }
+    });
+    std::thread enetClient(net_lambda, eClient);
 
+    while (!glfwWindowShouldClose(window))
+    {   
+        GLFrameBegin();
+        processInput(window, light);
+        c.DrawAll(renderer, camera, light.position);
+        colourWidget(backColour);
+        GLFrameEnd(window);
+    }
+    enetClient.join();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
     glfwTerminate();
     return 0;
 }
-
+void GLFrameBegin(){
+    glClearColor(backColour[0], backColour[1], backColour[2], backColour[4]);
+    IMGUIStart();
+    float currentFrame = glfwGetTime();
+    globals.deltaTime = currentFrame - globals.lastFrame;
+    globals.lastFrame = currentFrame;
+    if(globals.deltaTime > 0.5)
+        globals.deltaTime = 0;
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+}
+void ENETCLIENTUPDATE(){
+}
+void GLFrameEnd(GLFWwindow *window){
+    IMGUIEnd();
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+}
 void RendererEffects(Renderer& rn){
     Shader* sh = am.GetShader("Lighting");
     sh->use();

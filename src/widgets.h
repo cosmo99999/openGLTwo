@@ -1,6 +1,7 @@
 #pragma once
 #include "includes.h"
 #include "camera.h"
+#include "shapes.h"
 #include <iostream>
 #include "globals.h"
 extern Globals globals;
@@ -30,4 +31,24 @@ void cameraWidget(Camera& camera){
     ImGui::End();
     
 }
+void colourWidget(float* c){
 
+    int counter = 0;
+    ImGui::Begin("BackColour");                              
+    ImGui::SliderFloat("R", &c[0], 0.0f, 1.0f);                  
+    ImGui::SliderFloat("G", &c[1], 0.0f, 1.0f);                  
+    ImGui::SliderFloat("B", &c[2], 0.0f, 1.0f);                  
+    ImGui::SliderFloat("A", &c[3], 0.0f, 1.0f);                  
+    ImGui::End();
+    
+}
+void shapeWidget(Object* obj){
+
+    int counter = 0;
+    ImGui::Begin("Obj");                              
+    ImGui::SliderFloat("Rotation X: ", &obj->rotation.x, -10.0f, 10.0f);                  
+    ImGui::SliderFloat("Rotation Y: ", &obj->rotation.y, 0.0f, 1.0f);                  
+    ImGui::SliderFloat("Rotation Z: ", &obj->rotation.z, 0.0f, 1.0f);                                    
+    ImGui::End();
+    
+}
