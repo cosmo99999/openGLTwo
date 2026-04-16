@@ -105,7 +105,7 @@ int Config(){
 int main()
 {
     if(Config() == -1) return -1;
-    EnetClient eClient = EnetClient();
+    EnetClient eClient = EnetClient(&camera);
     Renderer renderer;
     Sphere light = Sphere(am.GetShader("Regular"), 20, 20, 1.0f, glm::vec3(0.0f, 0.0f, 0.0f));
     ObjectCollection c;
@@ -120,24 +120,17 @@ int main()
     c.RandomiseObjectColours();
     c.RandomiseScale();
     c.RandomiseObjectPositions(glm::vec2(-100.0f, 100.0f));
-    
-    auto net_lambda([](EnetClient eClient){
-        while(!glfwWindowShouldClose(window)){
-            eClient.SendPacket(camera);
-            std::cout<< std::to_string(camera.Position.x) << "\n";
-        }
-    });
-    std::thread enetClient(net_lambda, eClient);
-
+    eClient.listen();
     while (!glfwWindowShouldClose(window))
-    {   
+    {
+        eClient.SendPacket(camera);
         GLFrameBegin();
         processInput(window, light);
         c.DrawAll(renderer, camera, light.position);
         colourWidget(backColour);
         GLFrameEnd(window);
     }
-    enetClient.join();
+    eClient.stop();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

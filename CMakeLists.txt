@@ -19,7 +19,8 @@ src/main.cpp
 src/object.cpp 
 src/renderer.cpp 
 src/vertexArray.cpp 
-src/vertexBuffer.cpp 
+src/vertexBuffer.cpp
+src/camera.h 
 bindings/imgui_impl_glfw.cpp
 bindings/imgui_impl_glfw.h
 bindings/imgui_impl_opengl3.cpp

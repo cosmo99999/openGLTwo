@@ -1,0 +1,1 @@
+. "/home/roryc/Documents/coding2026/openGLTwo/conanbuildenv-release-x86_64.sh"

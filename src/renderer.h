@@ -1,16 +1,17 @@
 #include "includes.h"
+#include "signal.h"
 #include "vertexArray.h"
 #include "indexBuffer.h"
 #include "shader.h"
 
-#define ASSERT(x) if (!(x)) __debugbreak();
+#define ASSERT(x) if (!(x)) raise(SIGTRAP);
 #define GLCall(x) GlClearError();\
     x;\
     ASSERT(GLLogCall(#x, __FILE__, __LINE__))
 
-inline void GlClearError();
+void GlClearError();
 
-inline bool GLLogCall(const char* function, const char* file, int line);
+bool GLLogCall(const char* function, const char* file, int line);
 
 class Renderer {
 public:

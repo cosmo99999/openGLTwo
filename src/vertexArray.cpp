@@ -19,19 +19,19 @@ void VertexArray::AddBuffer(VertexBuffer &vb, VertexBufferLayout &layout)
     //debugging
     GLint maxAttribs = 0;
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs);
-    std::cout << "[VAO] Stride: " << layout.GetStride()
-              << " | Element count: " << elements.size()
-              << " | Max attribs: " << maxAttribs << "\n";
+    // std::cout << "[VAO] Stride: " << layout.GetStride()
+    //           << " | Element count: " << elements.size()
+    //           << " | Max attribs: " << maxAttribs << "\n";
     
     count = layout.GetElementsCount();
     for(unsigned int i = 0; i < elements.size(); i++){
         const auto& element = elements[i];
         //debugging
-        std::cout << "[VAO] Attrib " << i
-                  << " | count: "      << element.count
-                  << " | type: 0x"     << std::hex << element.type << std::dec
-                  << " | normalised: " << (int)element.normalised
-                  << " | offset: "     << offset << "\n";
+        // std::cout << "[VAO] Attrib " << i
+        //           << " | count: "      << element.count
+        //           << " | type: 0x"     << std::hex << element.type << std::dec
+        //           << " | normalised: " << (int)element.normalised
+        //           << " | offset: "     << offset << "\n";
         GLCall(glEnableVertexAttribArray(i));
         GLCall(glVertexAttribPointer(i, element.count, element.type, element.normalised, layout.GetStride(),  (const void*)(uintptr_t)offset));
         offset += element.count * VertexBufferElement::GetSizeOfType(element.type);
