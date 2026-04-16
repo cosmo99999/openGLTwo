@@ -1,4 +1,5 @@
 #pragma once
+#include <X11/Xutil.h>
 #include <cstring>
 #include <enet/enet.h>
 #include <iostream>
@@ -19,35 +20,29 @@ int CharToInt(char in) {
   return result;
 }
 
-float FourByteCharToFloat(char *in, int start) {
-  std::string temp = "";
-  temp += in[start] +
-          in[start + 1] +
-          in[start + 2] +
-          in[start + 3];
-  const char* tempChar = temp.c_str();
-  float result = std::stof(tempChar); 
+float FourByteCharToFloat(std::string in, int start) {
+  std::string temp = in.substr(start, 4);
+  // std::cout << "stoffing: " << temp << "\n";
+  float result = std::stof(temp); 
   return result;
 }
 
-char *ReadPlayerData(unsigned char *input) {
-  char *data = new char[13];
+std::string ReadPlayerData(unsigned char *input) {
+  std::string result = "";
 
   for (int i = 0; i < 13; i++) {
-    data[i] = static_cast<char>(data[i]);
+    result += static_cast<char>(input[i]);
   }
 
-  return data;
+  return result;
 }
-char *ReadBroadcastPlayerData(unsigned char *input) {
+std::string ReadBroadcastPlayerData(unsigned char *input) {
   char pNumChar = static_cast<char>(input[0]);
   int pNum = CharToInt(pNumChar);
-  int bytes = (13 * pNum) + 1;
-  char *data = new char[bytes];
-
-  for (int i = 0; i < bytes; i++) {
-    data[i] = static_cast<char>(data[i]);
+  int byteCount = pNum*13 + 1;
+  std::string result = "";
+  for(int i = 0; i < byteCount; i++){
+    result += static_cast<char>(input[i]);
   }
-
-  return data;
+  return result;
 }

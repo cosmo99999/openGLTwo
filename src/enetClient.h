@@ -1,10 +1,14 @@
 #include "camera.h"
+#include <any>
+#include <chrono>
 #include "enetHelpers.h"
 #include "includes.h"
 #include <atomic>
 #include <cstdio>
 #include <enet/enet.h>
 #include <iostream>
+#include <mutex>
+#include <regex>
 #include <stdio.h>
 #include <string>
 #include <thread>
@@ -15,7 +19,6 @@ inline std::string FloatToString2Dec(float in) {
   std::string output(temp);
   return output;
 }
-
 
 class Player {
 
@@ -36,15 +39,17 @@ public:
 class EnetClient {
 public:
   std::thread t_listener;
+  std::thread t_sender;
+  std::mutex pMtx;
   GameManager gm = GameManager();
-  Camera* camera = nullptr;
+  Camera *camera = nullptr;
   ENetHost *client = {0};
   ENetAddress address;
   ENetPeer *peer = {0};
   ENetEvent event = {ENET_EVENT_TYPE_NONE};
   ENetPacket *currentPacket = nullptr;
   int clientID = -1;
-  EnetClient(Camera* cam) {
+  EnetClient(Camera *cam) {
     camera = cam;
     if (enet_initialize() != 0) {
       std::cout << "cant initiliaze enet" << "\n";
@@ -77,52 +82,62 @@ public:
     }
     std::cout << "This ID: " << gm.id << "\n";
   }
-  void listen(){  
-    t_listener = std::thread(&EnetClient::listenerListen,this);
+  void startListening() {
+    t_listener = std::thread(&EnetClient::listenerListen, this);
   }
-  void stop(){
-    t_listener.join();
-  }
-  void listenerListen(){
-    while(true){
+  void stopListening() { t_listener.join(); }
+  void listenerListen() {
+    while (true) {
       Listen();
     }
   }
-  
+  void startSending(Camera* cam) {
+    t_sender = std::thread(&EnetClient::senderSend, this, cam);
+  }
+  void stopSending() { t_sender.join(); }
+  void senderSend(Camera* cam) {
+    while (true) {
+      pMtx.lock();
+      SendPacket(*cam);
+      pMtx.unlock();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  }
+
   void SendPacket(Camera cam) {
     event = {ENET_EVENT_TYPE_NONE};
-    std::string packetString = std::to_string(gm.id) +
-                               FloatToString2Dec(cam.Position.x) +
-                               FloatToString2Dec(cam.Position.y) +
-                               FloatToString2Dec(cam.Position.z);
+    std::string packetString =
+        std::to_string(gm.id) + FloatToString2Dec(cam.Position.x) +
+        FloatToString2Dec(cam.Position.y) + FloatToString2Dec(cam.Position.z);
 
     char packetData[100] = "";
     strcat(packetData, packetString.c_str());
     ENetPacket *pack = enet_packet_create(&packetData, strlen(packetData) + 1,
                                           ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(peer, 0, pack);
-    Listen();
   }
   void Listen() {
     char *temp = new char[100];
     if (enet_host_service(client, &event, 100) > 0) {
       if (event.type == ENET_EVENT_TYPE_RECEIVE) {
-        char* data = ReadBroadcastPlayerData(event.packet->data);
+        pMtx.lock();
+        std::string data = ReadBroadcastPlayerData(event.packet->data);
         std::cout << data << "\n";
-        UpdatePlayersLists(data);                    
+        UpdatePlayersLists(data);
+        pMtx.unlock();
       }
     }
   }
-  void UpdatePlayersLists(char* data){
+  void UpdatePlayersLists(std::string data) {
     gm.players.clear();
     int pCount = CharToInt(data[0]);
     int playerByteSize = 13;
-    for(int i = 0; i < pCount; i++){
-      int position = (i * playerByteSize);
-      int pId = position + 1;
-      float pX = FourByteCharToFloat(data, position + 2);
-      float pY = FourByteCharToFloat(data, position + 6);
-      float pZ = FourByteCharToFloat(data, position + 10);
+    for (int i = 0; i < pCount; i++) {
+      int position = (i * playerByteSize) + 1;
+      int pId = CharToInt(data[position]);
+      float pX = FourByteCharToFloat(data, position + 1);
+      float pY = FourByteCharToFloat(data, position + 5);
+      float pZ = FourByteCharToFloat(data, position + 9);
       // if(pId == gm.id) continue;
       Player p = Player(pId);
       p.x = pX;
@@ -132,14 +147,14 @@ public:
       PrintPlayers();
     }
   }
-  void PrintPlayers(){
-    for(int i = 0; i < gm.players.size(); i++){
-      Player& p = gm.players[i];
-      std::cout << "ID: " << p.id << "\n";    
-      std::cout << "X: " << p.x << "\n";    
-      std::cout << "Y: " << p.y << "\n";    
+  void PrintPlayers() {
+    for (int i = 0; i < gm.players.size(); i++) {
+      Player &p = gm.players[i];
+      std::cout << "ID: " << p.id << "\n";
+      std::cout << "X: " << p.x << "\n";
+      std::cout << "Y: " << p.y << "\n";
       std::cout << "Z: " << p.z << "\n";
-      std::cout << "\n";    
+      std::cout << "\n";
     }
   }
 };

@@ -9,58 +9,48 @@
 #include <string.h>
 #include <vector>
 #include "enetHelpers.h"
-
+#include <thread>
+#include <mutex>
 class GLGamePlayer {
 public:
   int id;
-  char *x = new char[4];
-  char *y = new char[4];
-  char *z = new char[4];
+  std::string x = "";
+  std::string y = "";
+  std::string z = "";
   GLGamePlayer(int ID) { id = ID; }
 };
 class GLGameManager {
 public:
+  std::mutex pMtx;
   std::vector<GLGamePlayer> players;
   GLGameManager() {}
-
+  ENetHost* host;
   void Update(unsigned char *data) {
-    char *pData = new char[13];
-    for (int i = 0; i < 13; i++) {
-      pData[i] = static_cast<char>(data[i]);
-    }
-    std::cout << "Packet recieved from player : " << pData[0] << "\n";
-    int pID = pData[0] - '0';
+    std::string strData = ReadPlayerData(data);    
+    int pID = CharToInt(strData[0]);
+    std::cout << "playerID from packet : " << pID << "\n";
     if (GetPlayerFromID(pID) != nullptr) {
-      UpdatePlayerData(GetPlayerFromID(pID), pData);
+      UpdatePlayerData(GetPlayerFromID(pID), strData);
     } else {
       std::cout << "Packet Recieved player unknown" << "\n";
     }
   }
-  void UpdatePlayerData(GLGamePlayer *p, char *data) {
-    char *xChar = new char[4];
-    char *yChar = new char[4];
-    char *zChar = new char[4];
-    for (int i = 1; i < 5; i++) {
-      xChar[i] = static_cast<char>(data[i]);
-      yChar[i] = static_cast<char>(data[i + 4]);
-      zChar[i] = static_cast<char>(data[i + 8]);
-    }
-    delete[] p->x;
-    delete[] p->y;
-    delete[] p->z;
-    p->x = new char[strlen(xChar)];
-    std::strcpy(p->x, xChar);
-    p->y = new char[strlen(yChar)];
-    std::strcpy(p->y, yChar);
-    p->z = new char[strlen(zChar)];
-    std::strcpy(p->z, zChar);
-    delete[] xChar;
-    delete[] yChar;
-    delete[] zChar;
+  void UpdatePlayerData(GLGamePlayer *p, std::string data) {
+    p->x = data.substr(1, 4);
+    p->y = data.substr(5, 4);
+    p->z = data.substr(9, 4);
   }
-  void Broadcast(ENetHost *host) {
+
+  void Broadcast() {
+    if(players.size() < 1) return;
     std::string data = std::to_string(players.size());
+    
     for (auto p : players) {
+      if(p.x == "") return;
+      std::cout << "playerID: " << p.id << "\n";
+      std::cout << "x: " << p.x << "\n";
+      std::cout << "y: " << p.y << "\n";
+      std::cout << "z: " << p.z << "\n";
       data += std::to_string(p.id) +
               std::string(p.x) +
               std::string(p.y) +
@@ -68,9 +58,11 @@ public:
     }
     const char *dataC = data.c_str();
     std::cout << "sending packet broadcast: " << dataC << "\n";
+    std::cout << "players: " << std::to_string(players.size()) << "\n";
     ENetPacket *packet =
         enet_packet_create(dataC, strlen(dataC) + 1, ENET_PACKET_FLAG_RELIABLE);
     enet_host_broadcast(host, 0, packet);
+    std::cout << "sent! " << "\n";
   }
   void SendNewPlayerID(ENetPeer *peer) {
     int newID = players.size() + 1;
@@ -89,6 +81,14 @@ public:
       }
     }
     return nullptr;
+  }
+  void BroadcasterLoop(){
+      while(true){
+        pMtx.lock();
+        Broadcast();
+        pMtx.unlock();        
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
   }
 };
 
@@ -117,7 +117,9 @@ int main() {
 
   /* Wait up to 1000 milliseconds for an event. (WARNING: blocking) */
   GLGameManager gManager = GLGameManager();
+  gManager.host = server;
   int playerCounter = 0;
+  std::thread t_broadcast = std::thread(&GLGameManager::BroadcasterLoop,std::ref(gManager));
   while (true) {
     ENetEvent event;
 
@@ -133,9 +135,10 @@ int main() {
         break;
 
       case ENET_EVENT_TYPE_RECEIVE:
-        std::cout << event.packet->data << "\n";
+        // std::cout << event.packet->data << "\n";
+        gManager.pMtx.lock();
         gManager.Update(event.packet->data);
-        gManager.Broadcast(server);
+        gManager.pMtx.unlock();
         break;
 
       case ENET_EVENT_TYPE_DISCONNECT:
@@ -146,7 +149,7 @@ int main() {
       }
     }
   }
-
+  t_broadcast.join();
   enet_host_destroy(server);
   enet_deinitialize();
   return 0;

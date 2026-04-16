@@ -120,17 +120,18 @@ int main()
     c.RandomiseObjectColours();
     c.RandomiseScale();
     c.RandomiseObjectPositions(glm::vec2(-100.0f, 100.0f));
-    eClient.listen();
+    eClient.startListening();
+    eClient.startSending(&camera);
     while (!glfwWindowShouldClose(window))
     {
-        eClient.SendPacket(camera);
         GLFrameBegin();
         processInput(window, light);
         c.DrawAll(renderer, camera, light.position);
         colourWidget(backColour);
         GLFrameEnd(window);
     }
-    eClient.stop();
+    eClient.stopListening();
+    eClient.stopSending();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
