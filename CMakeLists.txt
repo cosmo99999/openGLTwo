@@ -13,7 +13,6 @@ add_executable(enetHost src/enetHost.cpp)
 add_executable(openGLTwo
 src/includes.h
 src/globals.h
-src/enetClient.h
 src/indexBuffer.cpp
 src/main.cpp
 src/object.cpp 

@@ -6,8 +6,8 @@
 #include <filesystem>
 #include "widgets.h"
 #include "includes.h"
-#include "enetClient.h"
 #include <thread>
+#include "enetPacket.h"
 Globals globals = Globals();
 GLFWwindow* window;
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -105,12 +105,13 @@ int Config(){
 int main()
 {
     if(Config() == -1) return -1;
-    EnetClient eClient = EnetClient(&camera);
+    
+
     Renderer renderer;
     Sphere light = Sphere(am.GetShader("Regular"), 20, 20, 1.0f, glm::vec3(0.0f, 0.0f, 0.0f));
     ObjectCollection c;
     
-    
+
     
     c.Add(&light);
     for(int i = 0; i < 20; i++){
@@ -120,18 +121,36 @@ int main()
     c.RandomiseObjectColours();
     c.RandomiseScale();
     c.RandomiseObjectPositions(glm::vec2(-100.0f, 100.0f));
-    eClient.startListening();
-    eClient.startSending(&camera);
+
+    ClientPacketManager cManager = ClientPacketManager(25, &camera.Position.x, &camera.Position.y, &camera.Position.z);
+    cManager.startListening();
+    cManager.startSending();
+
+    std::cout << "host address" << cManager.host->address.host <<"\n";
+    std::cout << "host port" << cManager.host->address.port <<"\n";
     while (!glfwWindowShouldClose(window))
     {
         GLFrameBegin();
         processInput(window, light);
+        for(auto p : cManager.players){
+            std::cout << "players : " << cManager.players.size();
+            std::cout << "pID: " << p.id << "\n";
+            std::cout << "x: " << p.x << "\n";
+            std::cout << "y: " << p.y << "\n";
+            std::cout << "z: " << p.z << "\n";
+            std::cout << "\n";
+            if(p.id != cManager.myID){
+                Sphere pCube  = Sphere(am.GetShader("Lighting"),10, 10, 1.0f, glm::vec3(p.x, p.y, p.z));
+                pCube.scale = glm::vec3(10.0f);
+                pCube.Draw(renderer, camera, light.position);
+            }
+        }
         c.DrawAll(renderer, camera, light.position);
         colourWidget(backColour);
         GLFrameEnd(window);
     }
-    eClient.stopListening();
-    eClient.stopSending();
+    cManager.stopListening();
+    cManager.stopSending();
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
