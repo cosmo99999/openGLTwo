@@ -12,8 +12,14 @@ public:
   float x;
   float y;
   float z;
-
-  Player(int ID) { id = ID; }
+  mutable std::mutex* mtx;
+  Player(int ID) {
+     id = ID;
+     mtx = new std::mutex;
+  }
+  ~Player(){
+    delete mtx;
+  }
 };
 
 class GamePacket {
@@ -66,7 +72,7 @@ public:
   GamePacket *outgoingPacket = nullptr;
 
   ServerPacketManager(int frequency) {
-    host = new ENetServer(9999, "127.0.0.5");
+    host = new ENetServer(9999, "0.0.0.0");
     sendFrequency = frequency;
   }
   void startListening() override {
@@ -85,7 +91,7 @@ public:
       pMtx.unlock();
       if (outgoingPacket->packet != nullptr) {
         host->SendPacket(outgoingPacket->packet);
-        std::cout << "sending:  " << outgoingPacket->packet->data << "\n";
+        std::cout << "sending packet with player count:  " << players.size() << "\n";
       }
       DeleteBroadCastPacket();
       std::this_thread::sleep_for(std::chrono::milliseconds(sendFrequency));
@@ -99,12 +105,12 @@ public:
         break;
       case ENET_EVENT_TYPE_CONNECT:
         std::cout << "User Connected from " << event.peer->address.host << "\n";
-        CreateConnectionPacket();
+        ManageConnections(event.peer);
         host->SendPacket(outgoingPacket->packet, event.peer);
         DeleteBroadCastPacket();
         break;
       case ENET_EVENT_TYPE_RECEIVE:
-        std::cout << "recieved packet: " << event.packet->data << "\n";
+        // std::cout << "recieved packet: " << event.packet->data << "\n";
         pMtx.lock();
         HandleIncomingPacket(event.packet);
         pMtx.unlock();
@@ -113,6 +119,7 @@ public:
       case ENET_EVENT_TYPE_DISCONNECT:
         std::cout << "User disconnected from : " << event.peer->address.host
                   << "\n";
+        event.peer->data = NULL;
         break;
       }
     }
@@ -161,9 +168,11 @@ public:
     }
   }
   void CreateBroadCastPacket() { outgoingPacket = new GamePacket(players); }
-  void CreateConnectionPacket() {
-    outgoingPacket = new GamePacket(players.size() + 1);
-    players.emplace_back(Player(players.size() + 1));
+  void ManageConnections(ENetPeer* peer) {
+    int id = players.size() + 1;
+    outgoingPacket = new GamePacket(id);
+    peer->data = &id; 
+    players.emplace_back(Player(id));
   }
   void DeleteBroadCastPacket() { delete outgoingPacket; }
 };
@@ -178,7 +187,10 @@ public:
   float *pY;
   float *pZ;
   ClientPacketManager(int frequency, float *x, float *y, float *z) {
-    host = new ENetClient(9999, "127.0.0.5");
+    std::string targetIP;
+    std::cout << "Enter IP to connect to: " << "\n";
+    std::cin >> targetIP;
+    host = new ENetClient(9999, targetIP);
     pX = x;
     pY = y;
     pZ = z;
@@ -239,7 +251,9 @@ public:
   }
 
   void UpdatePlayersFromPacketString(std::string data) {
+    Player::clientAccessingPlayerData.lock();
     players.clear();
+    Player::clientAccessingPlayerData.unlock();
     int tempID = -1;
     float tempX = -1;
     float tempY = -1;
@@ -269,15 +283,15 @@ public:
           tempY = -1;
           tempZ = -1;
           tempID = -1;
-          std::cout << "p: " << p.id << "\n";
-          std::cout << "x: " << p.x << "\n";
-          std::cout << "z: " << p.z << "\n";
+          // std::cout << "p: " << p.id << "\n";
+          // std::cout << "x: " << p.x << "\n";
+          // std::cout << "z: " << p.z << "\n";
         }
         tempData = "";
         continue;
       }
       tempData += data[i];
-      std::cout << "tempData " << tempData << "\n";
+      // std::cout << "tempData " << tempData << "\n";
     }
   }
   void CreateBroadCastPacket() {

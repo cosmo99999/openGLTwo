@@ -3,8 +3,14 @@
 #include "vertexArray.h"
 #include "indexBuffer.h"
 #include "shader.h"
+#include "../configBuild.h"
 
-#define ASSERT(x) if (!(x)) raise(SIGTRAP);
+#ifdef COMPILING_FOR_WINDOWS
+    #define ASSERT(x) if (!(x)) __debugbreak();
+#else
+    #define ASSERT(x) if (!(x)) raise(SIGTRAP);
+#endif
+
 #define GLCall(x) GlClearError();\
     x;\
     ASSERT(GLLogCall(#x, __FILE__, __LINE__))

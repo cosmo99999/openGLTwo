@@ -52,6 +52,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 };
 void IMGUIStart();
 void IMGUIEnd();
+
 void ENETCLIENTUPDATE();
 int Config(){
     // glfw: initialize and configure
@@ -121,7 +122,6 @@ int main()
     c.RandomiseObjectColours();
     c.RandomiseScale();
     c.RandomiseObjectPositions(glm::vec2(-100.0f, 100.0f));
-
     ClientPacketManager cManager = ClientPacketManager(25, &camera.Position.x, &camera.Position.y, &camera.Position.z);
     cManager.startListening();
     cManager.startSending();
@@ -132,8 +132,9 @@ int main()
     {
         GLFrameBegin();
         processInput(window, light);
+        Player::clientAccessingPlayerData.lock();
         for(auto p : cManager.players){
-            std::cout << "players : " << cManager.players.size();
+            std::cout << "players : " << cManager.players.size() << "\n";
             std::cout << "pID: " << p.id << "\n";
             std::cout << "x: " << p.x << "\n";
             std::cout << "y: " << p.y << "\n";
@@ -145,6 +146,7 @@ int main()
                 pCube.Draw(renderer, camera, light.position);
             }
         }
+        Player::clientAccessingPlayerData.unlock();
         c.DrawAll(renderer, camera, light.position);
         colourWidget(backColour);
         GLFrameEnd(window);

@@ -5,7 +5,6 @@
 #include <enet/enet.h>
 #include <iostream>
 #include <mutex>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +28,7 @@ public:
   ENetEvent Listen() {
     ENetEvent event;
     std::string output;
-    enet_host_service(host, &event, 0);
+    enet_host_service(host, &event, 25);
     return event;
   }
   virtual void SendPacket(ENetPacket *packet) = 0;

@@ -9,6 +9,18 @@ find_package(glad REQUIRED)
 find_package(imgui REQUIRED)
 find_package(enet REQUIRED)
 
+
+set(COMPILING_FOR_WINDOWS 0)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
+        set(COMPILING_FOR_WINDOWS 1)
+    endif()
+endif()
+
+
+configure_file(configBuild.h.in ../../configBuild.h)
+
 add_executable(enetHost src/enetHost.cpp)
 add_executable(openGLTwo
 src/includes.h
