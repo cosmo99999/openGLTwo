@@ -3,7 +3,7 @@
 #include "vertexArray.h"
 #include "indexBuffer.h"
 #include "shader.h"
-#include "../configBuild.h"
+#include "configBuild.h"
 
 #ifdef COMPILING_FOR_WINDOWS
     #define ASSERT(x) if (!(x)) __debugbreak();

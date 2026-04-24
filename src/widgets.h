@@ -1,13 +1,13 @@
 #pragma once
 #include "includes.h"
 #include "camera.h"
-#include "shapes.h"
+#include "entity.h"
 #include <iostream>
 #include "globals.h"
 extern Globals globals;
 float widgetTimer = 0.0f;
 void cameraWidget(Camera& camera){
-
+    
     int counter = 0;
     ImGui::Begin("Camera Widget");                          // Create a window called "Hello, world!" and append into it.
     ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
@@ -42,7 +42,7 @@ void colourWidget(float* c){
     ImGui::End();
     
 }
-void shapeWidget(Object* obj){
+void shapeWidget(Entity* obj){
 
     int counter = 0;
     ImGui::Begin("Obj");                              

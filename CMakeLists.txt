@@ -9,25 +9,46 @@ find_package(glad REQUIRED)
 find_package(imgui REQUIRED)
 find_package(enet REQUIRED)
 
-
-set(COMPILING_FOR_WINDOWS 0)
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14.0)
+set(PROJECT_NAME "openGLTwo")
+if ("${COMPILE_FLAG}" STREQUAL "LINUX")
+        set(COMPILING_FOR_WINDOWS 0)
+    endif()
+if ("${COMPILE_FLAG}" STREQUAL "WINDOWS")
         set(COMPILING_FOR_WINDOWS 1)
     endif()
-endif()
 
 
-configure_file(configBuild.h.in ../../configBuild.h)
+configure_file(cmake/compileFlags.h.in ../../src/configBuild.h)
 
-add_executable(enetHost src/enetHost.cpp)
+add_executable(enetHost
+src/gameState.cpp
+src/enetHost.cpp
+src/includes.h
+src/globals.h
+src/indexBuffer.cpp
+src/entity.cpp 
+src/renderer.cpp 
+src/vertexArray.cpp 
+src/vertexBuffer.cpp
+src/camera.h 
+bindings/imgui_impl_glfw.cpp
+bindings/imgui_impl_glfw.h
+bindings/imgui_impl_opengl3.cpp
+bindings/imgui_impl_opengl3.h
+bindings/imgui_impl_opengl3_loader.h
+bindings/imgui.cpp
+bindings/imgui_draw.cpp
+bindings/imgui_demo.cpp
+bindings/imgui_tables.cpp
+bindings/imgui_widgets.cpp
+)
 add_executable(openGLTwo
+src/gameState.cpp
 src/includes.h
 src/globals.h
 src/indexBuffer.cpp
 src/main.cpp
-src/object.cpp 
+src/entity.cpp 
 src/renderer.cpp 
 src/vertexArray.cpp 
 src/vertexBuffer.cpp
@@ -54,5 +75,12 @@ glfw
 imgui::imgui
 enet::enet
 )
-target_link_libraries(enetHost PRIVATE enet::enet)
+target_link_libraries(enetHost PRIVATE
+glm::glm
+opengl::opengl
+glfw
+imgui::imgui
+enet::enet
+)
 target_link_libraries(openGLTwo PUBLIC glad::glad)
+target_link_libraries(enetHost PUBLIC glad::glad)

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <glm/glm.hpp>
 #include "includes.h"
+
 class Shader {
 public:
     unsigned int ID;
@@ -72,6 +73,7 @@ Shader(std::string shaderPath){
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);
+    std::cout << "Shader Load completed" << "\n";
 }
     //active shader
     void use(){

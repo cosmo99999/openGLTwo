@@ -1,2 +1,2 @@
 #!/bin/bash
- conan install . --build=missing --profile:build=default --profile:host=for_windows
+ conan install . --build=missing --profile:build=GL_for_linux --profile:host=GL_for_windows

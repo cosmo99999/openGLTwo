@@ -1,8 +1,11 @@
 #pragma once
 #include <string>
+#include <vector>
 #ifndef CAMERA_H
 #define CAMERA_H
-#include "includes.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "imgui.h"
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
@@ -81,7 +84,6 @@ public:
     float scrWidth = 0.0f;
     float scrHeight = 0.0f;
     float FOV = 90;
-    MovementStatus mStatus = MovementStatus::None;
     Camera(glm::vec3 position, float width, float height) 
     : Front(glm::vec3(0.0f, 0.0f, -1.0f)), 
       moveSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
@@ -157,7 +159,7 @@ public:
     }
 
     // processes input received from a mouse input system. Expects the offset value in both the x and y direction.
-    void ProcessMouseMovement(float xoffset, float yoffset, GLboolean constrainPitch = true)
+    void ProcessMouseMovement(float xoffset, float yoffset, bool constrainPitch)
     {
         xoffset *= MouseSensitivity;
         yoffset *= MouseSensitivity;
