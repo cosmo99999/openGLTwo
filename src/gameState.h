@@ -14,4 +14,5 @@ public:
   std::shared_ptr<Entity> DeserializeEntity(std::string);
   void UpdatePlayerFromPacket(std::string);
   int GetPlayerCount();
+  void PrintEntities();
 };

@@ -10,7 +10,7 @@
 #include <thread>
 Globals globals = Globals();
 GLFWwindow *window;
-AssetManager* am;
+AssetManager *am;
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window, Entity *me);
 void RendererEffects(Renderer &rn);
@@ -117,9 +117,20 @@ int main() {
     GLFrameBegin();
     processInput(window, &me);
     cManager.cMtx.lock();
+
+      // for (auto &e : cManager.gameState.entities) {
+      //   std::cout << "entity: " << e->entityName << "\n";
+      //   std::cout << "position: " << stringFromVec3(e->position) << "\n";
+      //   std::cout << "isLightSource: " << e->lightSource << "\n";
+      // }
     if (cManager.gameState.lightSources.size() > 0) {
       glm::vec3 lightpos = cManager.gameState.lightSources[0]->position;
       for (auto &e : cManager.gameState.entities) {
+        if(e->id == me.id) continue;
+        std::cout << "drawing entity: " << e->entityName << "\n";
+        std::cout << "position: " << stringFromVec3(e->position) << "\n";
+        std::cout << "scale: " << stringFromVec3(e->scale) << "\n";
+        std::cout << "rotation: " << stringFromVec3(e->rotation) << "\n";
         e->LoadMesh(am);
         e->Draw(renderer, camera, lightpos);
       }

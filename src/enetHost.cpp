@@ -4,8 +4,8 @@
 #include <memory>
 int main() {
   Sphere* light = new Sphere(glm::vec3(0.0f), glm::vec3(0.0f), "Regular", 20, 5);
-  Plane* plane = new Plane(glm::vec3(0.0f), glm::vec3(10.0f), "Lighting");
-      
+  Plane* plane = new Plane(glm::vec3(0.0f, -10.0f, 0.0f), glm::vec3(1.0f), "Lighting");
+  light->lightSource = true;
   ServerPacketManager server = ServerPacketManager(25);
   server.gameState.entities.emplace_back(light);
   server.gameState.entities.emplace_back(plane);

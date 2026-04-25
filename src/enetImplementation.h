@@ -18,8 +18,8 @@ public:
   std::string y;
   std::string z;
 
-  GamePacket(int id, Entity* p) {
-    if (id == -1)
+  GamePacket(Entity* p) {
+    if (p->id == -1)
       return;
     std::string packetString = "[id]" + wrapInQuotes(std::to_string(p->id)) +
                                "[position]" + wrapInQuotes(stringFromVec3(p->position)) +
@@ -120,7 +120,6 @@ public:
   std::mutex cMtx;
   GameState gameState;
   bool firstPacket = true;
-  int myID = -1;
   GamePacket *outgoingPacket = nullptr;
   Entity* me;
   ClientPacketManager(int frequency, Entity* m) {
@@ -145,7 +144,7 @@ public:
       cMtx.lock();
       if (!firstPacket) {
         CreateBroadCastPacket();
-        std::cout << "sending packet" << outgoingPacket->packet->data << "\n";
+        // std::cout << "sending packet" << outgoingPacket->packet->data << "\n";
         host->SendPacket(outgoingPacket->packet);
         DeleteBroadCastPacket();
       }
@@ -169,7 +168,7 @@ public:
           std::cout << "first packet: " << event.packet->data << "\n";
           firstPacket = false;
         } else {
-          std::cout << "recieved packet: " << event.packet->data << "\n";
+          // std::cout << "recieved packet: " << event.packet->data << "\n";
           HandleIncomingPacket(event.packet);
         }
         cMtx.unlock();
@@ -185,14 +184,15 @@ public:
   }
   void RecieveConnectionPacket(ENetPacket *packet) {
     std::string packetString = StringFromUChar(packet->data);
-    myID = (char)packetString[0] - '0';
+    me->id = (char)packetString[0] - '0';
+    std::cout << "myID: " << me->id << "\n";
   }
 
   void UpdateGameStateFromPacket(std::string data) {
     gameState.DeserializePacketIntoEntities(data);
   }
   void CreateBroadCastPacket() {
-    outgoingPacket = new GamePacket(myID, me);
+    outgoingPacket = new GamePacket(me);
   }
   void DeleteBroadCastPacket() { delete outgoingPacket; }
   void PrintEntities() {

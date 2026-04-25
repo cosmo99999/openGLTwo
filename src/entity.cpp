@@ -21,10 +21,10 @@ glm::vec3 vec3FromString(std::string data){
       if(x == -1){
         x = std::stof(tempString);
       }
-      if(y == -1){
+      else if(y == -1){
         x = std::stof(tempString);
       }
-      if(z == -1){
+      else if(z == -1){
         x = std::stof(tempString);
       }
     }else{
@@ -97,7 +97,7 @@ std::string Sphere::Serialize() {
 }
 Player::Player(int i, glm::vec3 pos, glm::vec3 vel, std::string shaderName)
     : Entity(pos, vel, "Player", shaderName) {
-  i = id;
+  id = i;
 }
 Cube::Cube(glm::vec3 pos, glm::vec3 vel, std::string shaderName)
     : Entity(pos, vel, "Cube", shaderName) {}
@@ -122,7 +122,6 @@ void Cube::LoadMesh(AssetManager *am) {
   va->AddBuffer(*vb, vl);
   va->SetCount(36);
   mesh = Mesh(shader, va, vb);
-  entityName = "cube";
 }
 void Sphere::LoadMesh(AssetManager *am) {
   GenSphere(stackAndSector);
@@ -138,9 +137,20 @@ void Sphere::LoadMesh(AssetManager *am) {
   va->AddBuffer(*vb, vl);
   va->SetCount(getIndexCount());
   mesh = Mesh(shader, ib, va, vb);
-  entityName = "sphere";
 }
-void Plane::LoadMesh(AssetManager *am) {
+
+void Player::LoadMesh(AssetManager *am) {
+  VertexBuffer *vb = new VertexBuffer(vertices, sizeof(vertices));
+  VertexArray *va = new VertexArray();
+  VertexBufferLayout vl;
+
+  Shader *shader = am->GetShader(shaderName);
+  vl.Push<float>(3);
+  vl.Push<float>(3);
+  va->AddBuffer(*vb, vl);
+  va->SetCount(36);
+  mesh = Mesh(shader, va, vb);
+}void Plane::LoadMesh(AssetManager *am) {
   VertexBuffer *vb = new VertexBuffer(vertices, sizeof(vertices));
   VertexArray *va = new VertexArray();
   VertexBufferLayout vl;
@@ -151,7 +161,6 @@ void Plane::LoadMesh(AssetManager *am) {
   va->SetCount(6);
   mesh = Mesh(shader, va, vb);
   mesh.material.colour = glm::vec3(0.5f, 0.5f, 0.5f);
-  entityName = "plane";
 }
 void Sphere::GenSphere(int stackAndSector) {
   float x, y, z, xy;                           // vertex position
