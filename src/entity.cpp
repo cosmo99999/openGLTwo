@@ -1,65 +1,106 @@
 #include "entity.h"
 #include "assetManager.h"
+#include <cwchar>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/trigonometric.hpp>
 #include <memory>
 extern Globals globals;
-std::string wrapInQuotes(std::string in){
+std::string wrapInQuotes(std::string in) {
   std::string result = "(";
   result += in;
   result += ")";
   return result;
 }
 
-glm::vec3 vec3FromString(std::string data){
+glm::vec3 vec3FromString(std::string data) {
   float x = -1;
   float y = -1;
   float z = -1;
   std::string tempString = "";
-  
-  for(int i = 0; i < data.length(); i++){
+
+  for (int i = 0; i < data.length(); i++) {
     char c = data[i];
-    if(c == ','){
-      if(x == -1){
+    if (c == ',') {
+      if (x == -1) {
         x = std::stof(tempString);
+      } else if (y == -1) {
+        y = std::stof(tempString);
+      } else if (z == -1) {
+        z = std::stof(tempString);
       }
-      else if(y == -1){
-        x = std::stof(tempString);
-      }
-      else if(z == -1){
-        x = std::stof(tempString);
-      }
-    }else{
+      tempString = "";
+    } else {
       tempString += c;
     }
   }
-  return glm::vec3(x,y,z);
+  return glm::vec3(x, y, z);
 }
-std::string stringFromVec3(glm::vec3 vec3){
+std::string stringFromVec3(glm::vec3 vec3) {
   std::string result = "";
   result += std::to_string(vec3.x) + ",";
   result += std::to_string(vec3.y) + ",";
   result += std::to_string(vec3.z) + ",";
   return result;
 }
-Entity::Entity(glm::vec3 pos, glm::vec3 vel, std::string eName,
-               std::string sName) {
+void Entity::Print() {
+  std::cout << "ID: " << id << "\n";
+  std::cout << "name: " << entityName << "\n";
+  std::cout << "position:  " << stringFromVec3(position) << "\n";
+  std::cout << "scale:  " << stringFromVec3(scale) << "\n";
+  std::cout << "rotation:  " << stringFromVec3(rotation) << "\n";
+}
+Entity::Entity(int i, glm::vec3 pos, glm::vec3 vel, glm::vec3 s, glm::vec3 r,
+               std::string eName, std::string sName) {
+  id = i;
   position = pos;
   velocity = vel;
+  scale = s;
+  rotation = r;
   entityName = eName;
   shaderName = sName;
 }
 glm::mat4 Entity::GetModelMatrix() {
   glm::mat4 model = glm::mat4(1.0f);
-  model = glm::translate(model, position);
-  model = glm::rotate(model, rotation.x, {1, 0, 0});
+  model = glm::translate(model, lerpPosition);
+  if (rotation.x != 0.0f) {
+    model = glm::rotate(model, glm::radians(lerpRotation.x), {1, 0, 0});
+  }
+  if (rotation.y != 0.0f) {
+    model = glm::rotate(model, glm::radians(lerpRotation.y), {0, 1, 0});
+  }
+  if (rotation.z != 0.0f) {
+    model = glm::rotate(model, glm::radians(lerpRotation.z),{0, 0, 1});
+  }
   model = glm::scale(model, scale);
   return model;
 }
-
+void Entity::Equals(std::shared_ptr<Entity> e) {
+  position = e->position;
+  velocity = e->velocity;
+  rotation = e->rotation;
+  scale = e->scale;
+  shaderName = e->shaderName;
+  lightSource = e->lightSource;
+}
+void Sphere::Equals(std::shared_ptr<Sphere> e) {
+  position = e->position;
+  velocity = e->velocity;
+  rotation = e->rotation;
+  scale = e->scale;
+  shaderName = e->shaderName;
+  lightSource = e->lightSource;
+  radius = e->radius;
+  stackAndSector = e->stackAndSector;
+}
 void Entity::Draw(Renderer &renderer, Camera &camera, glm::vec3 lightpos) {
   Update(camera, lightpos);
   mesh.Draw(renderer, camera, GetModelMatrix());
 }
 
+void Entity::SetLerps(std::shared_ptr<Entity> e, double alpha){
+  lerpPosition = glm::mix(position,e->position, alpha);
+  lerpRotation = glm::mix(rotation,e->rotation, alpha);
+}
 void Entity::Update(Camera &camera, glm::vec3 lightPos) {
   mesh.material.shader->use();
   mesh.material.shader->setVec3("objectColor", mesh.material.colour);
@@ -77,6 +118,7 @@ std::string Entity::Serialize() {
   result += "[position]" + wrapInQuotes(stringFromVec3(position));
   result += "[velocity]" + wrapInQuotes(stringFromVec3(velocity));
   result += "[scale]" + wrapInQuotes(stringFromVec3(scale));
+  result += "[rotation]" + wrapInQuotes(stringFromVec3(rotation));
   result += "\n";
   return result;
 }
@@ -90,27 +132,31 @@ std::string Sphere::Serialize() {
   result += "[position]" + wrapInQuotes(stringFromVec3(position));
   result += "[velocity]" + wrapInQuotes(stringFromVec3(velocity));
   result += "[scale]" + wrapInQuotes(stringFromVec3(scale));
+  result += "[rotation]" + wrapInQuotes(stringFromVec3(rotation));
   result += "[stackAndSector]" + wrapInQuotes(std::to_string(stackAndSector));
   result += "[radius]" + wrapInQuotes(std::to_string(radius));
   result += "\n";
   return result;
 }
-Player::Player(int i, glm::vec3 pos, glm::vec3 vel, std::string shaderName)
-    : Entity(pos, vel, "Player", shaderName) {
+Player::Player(int i, glm::vec3 pos, glm::vec3 vel, glm::vec3 s, glm::vec3 r,
+               std::string shaderName)
+    : Entity(i, pos, vel, s, r, "Player", shaderName) {
   id = i;
 }
-Cube::Cube(glm::vec3 pos, glm::vec3 vel, std::string shaderName)
-    : Entity(pos, vel, "Cube", shaderName) {}
-Sphere::Sphere(glm::vec3 pos, glm::vec3 vel, std::string shaderName, int sAs,
-               float r)
-    : Entity(pos, vel, "Sphere", shaderName) {
+Cube::Cube(int i, glm::vec3 pos, glm::vec3 vel, glm::vec3 s, glm::vec3 r,
+           std::string shaderName)
+    : Entity(i, pos, vel, s, r, "Cube", shaderName) {}
+Sphere::Sphere(int i, glm::vec3 pos, glm::vec3 vel, glm::vec3 s, glm::vec3 r,
+               std::string shaderName, int sAs, float ra)
+    : Entity(i, pos, vel, s, r, "Sphere", shaderName) {
   stackAndSector = sAs;
-  radius = r;
+  radius = ra;
 }
-Plane::Plane(glm::vec3 pos, glm::vec3 sc, std::string shaderName)
-    : Entity(pos, glm::vec3(0.0f), "Plane", shaderName) {
-      scale = sc;
-    }
+Plane::Plane(int i, glm::vec3 pos, glm::vec3 vel, glm::vec3 s, glm::vec3 r,
+             std::string shaderName)
+    : Entity(i, pos, glm::vec3(0.0f), s, r, "Plane", shaderName) {
+  scale = s;
+}
 void Cube::LoadMesh(AssetManager *am) {
   VertexBuffer *vb = new VertexBuffer(vertices, sizeof(vertices));
   VertexArray *va = new VertexArray();
@@ -150,7 +196,10 @@ void Player::LoadMesh(AssetManager *am) {
   va->AddBuffer(*vb, vl);
   va->SetCount(36);
   mesh = Mesh(shader, va, vb);
-}void Plane::LoadMesh(AssetManager *am) {
+  mesh.material.colour = glm::vec3(1.0f, 0.0f, 1.0f);
+  scale = glm::vec3(5.0f);
+}
+void Plane::LoadMesh(AssetManager *am) {
   VertexBuffer *vb = new VertexBuffer(vertices, sizeof(vertices));
   VertexArray *va = new VertexArray();
   VertexBufferLayout vl;
@@ -249,4 +298,10 @@ void Sphere::GenSphere(int stackAndSector) {
     interleavedVertices.push_back(normals[i * 3 + 1]);
     interleavedVertices.push_back(normals[i * 3 + 2]);
   }
+}
+void Player::UpdateRotation(Camera *c) { rotation.y = c->Yaw/4.0f; }
+
+bool Entity::HasCollision(std::shared_ptr<Entity> e){
+  
+  return true;
 }

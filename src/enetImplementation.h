@@ -1,4 +1,7 @@
 #include "enetTemplates.h"
+#include "entity.h"
+#include "gameState.h"
+#include "timer.h"
 #include <cstring>
 #include <enet/enet.h>
 #include <iostream>
@@ -6,8 +9,6 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#include "entity.h"
-#include "gameState.h"
 class GamePacket {
 public:
   ENetPacket *packet = nullptr;
@@ -18,12 +19,14 @@ public:
   std::string y;
   std::string z;
 
-  GamePacket(Entity* p) {
+  GamePacket(Entity *p) {
     if (p->id == -1)
       return;
-    std::string packetString = "[id]" + wrapInQuotes(std::to_string(p->id)) +
-                               "[position]" + wrapInQuotes(stringFromVec3(p->position)) +
-                               "[velocity]" + wrapInQuotes(stringFromVec3(p->velocity)) + "\n";
+    std::string packetString =
+        "[id]" + wrapInQuotes(std::to_string(p->id)) + "[position]" +
+        wrapInQuotes(stringFromVec3(p->position)) + "[velocity]" +
+        wrapInQuotes(stringFromVec3(p->velocity)) + "[rotation]" +
+        wrapInQuotes(stringFromVec3(p->rotation)) + "\n";
     packetData = packetString.c_str();
     packet = enet_packet_create(packetData, strlen(packetData) + 1,
                                 ENET_PACKET_FLAG_RELIABLE);
@@ -46,6 +49,7 @@ public:
   std::mutex pMtx;
   GameState gameState;
   GamePacket *outgoingPacket = nullptr;
+  std::unique_ptr<Timer> timer = std::make_unique<Timer>();
 
   ServerPacketManager(int frequency) {
     host = new ENetServer(9999, "0.0.0.0");
@@ -56,6 +60,7 @@ public:
   }
   void stopListening() override { t_listener.join(); }
   void startSending() override {
+    timer->Start();
     t_sender = std::thread(&ServerPacketManager::Send, this);
   }
   void stopSending() override { t_sender.join(); }
@@ -101,15 +106,16 @@ public:
   }
   void HandleIncomingPacket(ENetPacket *packet) {
     std::string packetString = StringFromUChar(packet->data);
-    gameState.UpdatePlayerFromPacket(packetString);
+    gameState.ServerDeserialize(packetString);
   }
 
   void CreateBroadCastPacket() {
-     std::string entString = gameState.SerializeEntities();
-     outgoingPacket = new GamePacket(entString);
-   }
-  void ManageNewConnection(ENetPeer* peer) {
-    int id = gameState.GetPlayerCount() + 1;
+    gameState.timeStamp = timer->ElapsedMilliseconds();
+    std::string entString = gameState.CreateOutgoingPacketString();
+    outgoingPacket = new GamePacket(entString);
+  }
+  void ManageNewConnection(ENetPeer *peer) {
+    int id = gameState.entities.size() + 1;
     outgoingPacket = new GamePacket(id);
     peer->data = &id;
   }
@@ -117,16 +123,22 @@ public:
 };
 class ClientPacketManager : public ENetManager {
 public:
+  std::unique_ptr<Timer> frameTimer = std::make_unique<Timer>();
   std::mutex cMtx;
-  GameState gameState;
+  GameState s1;
+  GameState s2;
+  GameState* sp1 = nullptr;
+  GameState* sp2 = nullptr;
+  bool stateOne = true;
+  float millisecondsBetweenStates = -1;
   bool firstPacket = true;
   GamePacket *outgoingPacket = nullptr;
-  Entity* me;
-  ClientPacketManager(int frequency, Entity* m) {
-    std::string targetIP;
-    std::cout << "Enter IP to connect to: " << "\n";
-    std::cin >> targetIP;
-    host = new ENetClient(9999, targetIP);
+  Entity *me;
+  ClientPacketManager(int frequency, Entity *m) {
+    // std::string targetIP;
+    // std::cout << "Enter IP to connect to: " << "\n";
+    // std::cin >> targetIP;
+    host = new ENetClient(9999, "localhost");
     me = m;
     sendFrequency = frequency;
   }
@@ -144,7 +156,8 @@ public:
       cMtx.lock();
       if (!firstPacket) {
         CreateBroadCastPacket();
-        // std::cout << "sending packet" << outgoingPacket->packet->data << "\n";
+        // std::cout << "sending packet" << outgoingPacket->packet->data <<
+        // "\n";
         host->SendPacket(outgoingPacket->packet);
         DeleteBroadCastPacket();
       }
@@ -189,17 +202,31 @@ public:
   }
 
   void UpdateGameStateFromPacket(std::string data) {
-    gameState.DeserializePacketIntoEntities(data);
+    // std::cout << "reached update game state " << "\n";
+    if(stateOne){
+      s1.ClientDeserialize(data);
+      stateOne = false;
+    }else{
+      s2.ClientDeserialize(data);
+      stateOne = true;
+    }
+    SetTimeBetweenStates();
   }
-  void CreateBroadCastPacket() {
-    outgoingPacket = new GamePacket(me);
-  }
-  void DeleteBroadCastPacket() { delete outgoingPacket; }
-  void PrintEntities() {
-    for (auto &p : gameState.entities) {
-      std::cout << "ID : " << p->id << "\n";
-      std::cout << "name : " << p->entityName << "\n";
-      std::cout << "\n";
+  void SetTimeBetweenStates(){
+    frameTimer->Start();
+    if(stateOne){
+      millisecondsBetweenStates = s2.timeStamp - s1.timeStamp;
+      sp1 = &s1;
+      sp2 = &s2;
+    }else{
+      millisecondsBetweenStates = s1.timeStamp - s2.timeStamp;
+      sp1 = &s2;
+      sp2 = &s1;
     }
   }
+  void CreateBroadCastPacket() {
+    outgoingPacket = new GamePacket(me->Serialize());
+  }
+  void DeleteBroadCastPacket() { delete outgoingPacket; }
+  
 };

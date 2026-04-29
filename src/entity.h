@@ -4,6 +4,7 @@
 #include "globals.h"
 #include "material.h"
 #include "mesh.h"
+#include <glm/ext/vector_float3.hpp>
 #include <memory>
 #include <random>
 
@@ -16,8 +17,10 @@ class Entity {
 public:
   int id = -1;
   glm::vec3 position;
+  glm::vec3 lerpPosition = glm::vec3(0.0f);
   glm::vec3 scale = glm::vec3(1.0f);
   glm::vec3 rotation = glm::vec3(0.0f);
+  glm::vec3 lerpRotation = glm::vec3(0.0f);
   glm::vec3 velocity;
   bool lightSource = false;
   float maxSpeed = 50.0f;
@@ -25,17 +28,21 @@ public:
   float decelearation = 50.0f;
   std::string entityName;
   std::string shaderName;
-
+  bool meshLoaded = false;
   Mesh mesh;
-
+  
   Entity() {};
-  Entity(glm::vec3 pos, glm::vec3 vel, std::string entityName,
+  Entity(int id, glm::vec3 position, glm::vec3 velocity, glm::vec3 scale, glm::vec3 rotation, std::string entityName,
          std::string shaderName);
+  virtual void Equals(std::shared_ptr<Entity>e);
   virtual void LoadMesh(AssetManager* am){};
   void Draw(Renderer &renderer, Camera &camera, glm::vec3 lightPos);
   void Update(Camera &camera, glm::vec3 lightPos);
-  glm::mat4 GetModelMatrix();
+  virtual glm::mat4 GetModelMatrix();
   virtual std::string Serialize();
+  bool HasCollision(std::shared_ptr<Entity> e);
+  void Print();
+  void SetLerps(std::shared_ptr<Entity> e, double alpha);
 };
 class Player : public Entity {
 public:
@@ -69,8 +76,9 @@ public:
       0.0f,  1.0f,  0.0f,  0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
       0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  0.5f,
       0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f};
-  Player(int id, glm::vec3 pos, glm::vec3 vel, std::string shaderName);
+  Player(int id, glm::vec3 pos, glm::vec3 vel, glm::vec3 scale, glm::vec3 rotation, std::string shaderName);
   void LoadMesh(AssetManager* am) override;
+  void UpdateRotation(Camera* cam);
 };
 class Plane : public Entity {
 public:
@@ -80,7 +88,7 @@ public:
 
       50.0f, 0.0f, -50.0f, 0.0f,   1.0f, 0.0f,   -50.0f, 0.0f, 50.0f,
       0.0f,  1.0f, 0.0f,   -50.0f, 0.0f, -50.0f, 0.0f,   1.0f, 0.0f};
-  Plane(glm::vec3 pos, glm::vec3 scale, std::string shaderName);
+  Plane(int id, glm::vec3 pos, glm::vec3 vel, glm::vec3 scale, glm::vec3 rotation, std::string shaderName);
   void LoadMesh(AssetManager* am) override;
 };
 class Cube : public Entity {
@@ -117,7 +125,8 @@ public:
       0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  0.5f,
       0.0f,  1.0f,  0.0f,  -0.5f, 0.5f,  -0.5f, 0.0f,  1.0f,  0.0f};
 
-  Cube(glm::vec3 pos, glm::vec3 velocity, std::string shaderName);
+  Cube(int id, glm::vec3 pos, glm::vec3 velocity, glm::vec3 scale, glm::vec3 rotation, std
+       ::string shaderName);
   void LoadMesh(AssetManager* am) override;
 };
 class Sphere : public Entity {
@@ -152,7 +161,7 @@ public:
   void setUpAxis(int up);
   void reverseNormals();
 
-  // for vertex data
+  // fou vertex data
   unsigned int getVertexCount() const {
     return (unsigned int)vertices.size() / 3;
   }
@@ -203,9 +212,10 @@ public:
   }
   
   glm::vec3 lightPos = glm::vec3(-5.0f, 5.0f, 0.0f);
-  Sphere(glm::vec3 pos, glm::vec3 velocity, std::string shaderName,
+  Sphere(int id, glm::vec3 pos, glm::vec3 velocity, glm::vec3 scale, glm::vec3 rotation, std::string shaderName,
          int stackAndSectors, float r);
   void GenSphere(int stackAndSectors);
   void LoadMesh(AssetManager* am) override;
   std::string Serialize() override;
+  void Equals(std::shared_ptr<Sphere> e);
 };

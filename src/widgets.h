@@ -2,6 +2,7 @@
 #include "includes.h"
 #include "camera.h"
 #include "entity.h"
+#include <imgui.h>
 #include <iostream>
 #include "globals.h"
 extern Globals globals;
@@ -42,13 +43,15 @@ void colourWidget(float* c){
     ImGui::End();
     
 }
-void shapeWidget(Entity* obj){
+void entityWidget(std::shared_ptr<Entity> e){
 
-    int counter = 0;
-    ImGui::Begin("Obj");                              
-    ImGui::SliderFloat("Rotation X: ", &obj->rotation.x, -10.0f, 10.0f);                  
-    ImGui::SliderFloat("Rotation Y: ", &obj->rotation.y, 0.0f, 1.0f);                  
-    ImGui::SliderFloat("Rotation Z: ", &obj->rotation.z, 0.0f, 1.0f);                                    
+    ImGui::Begin(std::to_string(e->id).c_str());                              
+    ImGui::SliderFloat("Rotation X: ", &e->rotation.x, -180.0f, 180.0f);                  
+    ImGui::SliderFloat("Rotation Y: ", &e->rotation.y, -180.0f, 180.0f);                  
+    ImGui::SliderFloat("Rotation Z: ", &e->rotation.z, -180.0f, 180.0f);                                    
+    ImGui::SliderFloat("position X: ", &e->position.x, -100.0f, 100.0f);                  
+    ImGui::SliderFloat("position Y: ", &e->position.y, -100.0f, 100.0f);                  
+    ImGui::SliderFloat("position Z: ", &e->position.z, -100.0f, 100.0f);
     ImGui::End();
     
 }
